@@ -17,7 +17,8 @@ async def handle_settings_command(interaction, logger):
     if str(reaction.emoji) == '✅':
         settings = load_settings("default_settings.json")
         await interaction.followup.send("Default settings loaded.")
-    
+    await msg.delete()
+
     # Modify settings
     for key, setting in settings.items():
         if setting['type'] == 'choice':
@@ -30,15 +31,18 @@ async def handle_settings_command(interaction, logger):
                 return user == interaction.user and str(reaction.emoji) in setting['choices'].values()
 
             reaction, _ = await interaction.client.wait_for('reaction_add', timeout=60.0, check=reaction_check)
-            settings[key]['value'] = [k for k, v in setting['choices'].items() if v == str(reaction.emoji)][0]
+            settings[key]['value'] = [k for k, v in setting['choices']. items() if v == str(reaction.emoji)][0]
             await msg.delete()
+
         else:
-            await interaction.followup.send(f"Please type a new value for {key} in this channel:")
+            prompt_msg = await interaction.followup.send(f"Please type a new value for {key} in this channel:")
             def message_check(m):
                 return m.author == interaction.user and m.channel == interaction.channel
 
             message = await interaction.client.wait_for('message', timeout=120.0, check=message_check)
             settings[key]['value'] = message.content
+            await prompt_msg.delete()
+            await message.delete()
 
     # Final prompt for saving
     msg = await interaction.followup.send("Do you want to save the changes? (✅/❌)")
@@ -46,11 +50,14 @@ async def handle_settings_command(interaction, logger):
     await msg.add_reaction('❌')
     
     reaction, _ = await interaction.client.wait_for('reaction_add', timeout=60.0, check=check)
+    await msg.delete()
     if str(reaction.emoji) == '✅':
         save_settings_to_file(settings, "user_settings.json")
-        await interaction.followup.send("Settings have been saved.")
+        save_msg = await interaction.followup.send("Settings have been saved.")
+        await save_msg.delete(delay=5)
     else:
-        await interaction.followup.send("Changes not saved.")
+        save_msg = await interaction.followup.send("Changes not saved.")
+        await save_msg.delete(delay=5)
 
 def load_settings(filename):
     try:
