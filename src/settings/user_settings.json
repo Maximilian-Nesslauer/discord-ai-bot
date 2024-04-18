@@ -9,11 +9,11 @@
     },
     "option2": {
         "type": "value",
-        "value": "123"
+        "value": "1234"
     },
     "option3": {
         "type": "choice",
-        "value": "No",
+        "value": "Yes",
         "choices": {
             "Yes": "\u2705",
             "No": "\u274c"

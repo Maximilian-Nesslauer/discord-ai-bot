@@ -2,7 +2,7 @@ import discord
 import json
 
 async def handle_settings_command(interaction, logger):
-    settings = load_settings("user_settings.json")
+    settings = load_settings("./src/settings/user_settings.json")
     
     # Initial prompt for loading defaults
     await interaction.response.send_message("Do you want to load the default settings? (✅/❌)")
@@ -15,8 +15,9 @@ async def handle_settings_command(interaction, logger):
 
     reaction, _ = await interaction.client.wait_for('reaction_add', timeout=60.0, check=check)
     if str(reaction.emoji) == '✅':
-        settings = load_settings("default_settings.json")
-        await interaction.followup.send("Default settings loaded.")
+        settings = load_settings("./src/settings/default_settings.json")
+        default_settings_loaded_msg = await interaction.followup.send("Default settings loaded.")
+        await default_settings_loaded_msg.delete(delay=5)
     await msg.delete()
 
     # Modify settings
@@ -52,7 +53,7 @@ async def handle_settings_command(interaction, logger):
     reaction, _ = await interaction.client.wait_for('reaction_add', timeout=60.0, check=check)
     await msg.delete()
     if str(reaction.emoji) == '✅':
-        save_settings_to_file(settings, "user_settings.json")
+        save_settings_to_file(settings, "./src/settings/user_settings.json")
         save_msg = await interaction.followup.send("Settings have been saved.")
         await save_msg.delete(delay=5)
     else:
