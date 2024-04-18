@@ -8,7 +8,7 @@ async def handle_settings_command(interaction, logger):
     settings = load_settings("./src/settings/user_settings.json")
     
     # Initial prompt for loading defaults
-    await interaction.response.send_message("Do you want to load the default settings? (✅/❌)")
+    await interaction.response.send_message("Do you want to load the default settings?")
     msg = await interaction.original_response()
     await msg.add_reaction('✅')
     await msg.add_reaction('❌')
@@ -28,7 +28,7 @@ async def handle_settings_command(interaction, logger):
     # Modify settings
     for key, setting in settings.items():
         if setting['type'] == 'choice':
-            message_text = f"Choose a value for {key}: " + ' '.join([f"{k} {v}" for k, v in setting['choices'].items()])
+            message_text = f"Choose a value for {key}: " + ' ; '.join([f"{k} ({v})" for k, v in setting['choices'].items()])
             msg = await interaction.followup.send(message_text)
             for emoji in setting['choices'].values():
                 await msg.add_reaction(emoji)
@@ -53,7 +53,7 @@ async def handle_settings_command(interaction, logger):
                 await message.delete()
 
     # Final prompt for saving
-    msg = await interaction.followup.send("Do you want to save the changes? (✅/❌)")
+    msg = await interaction.followup.send("Do you want to save the changes?")
     await msg.add_reaction('✅')
     await msg.add_reaction('❌')
     
