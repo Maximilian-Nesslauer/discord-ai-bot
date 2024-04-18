@@ -1,0 +1,5 @@
+{
+    "option1": {"type": "choice", "value": "A", "choices": ["A", "B", "C"]},
+    "option2": {"type": "value", "value": "100"},
+    "option3": {"type": "choice", "value": "No", "choices": ["Yes", "No"]}
+}
