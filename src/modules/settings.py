@@ -1,61 +1,71 @@
 import discord
 import json
-from discord.utils import get
 
-async def handle_settings_command(ctx, logger):
+async def handle_settings_command(interaction, logger):
     settings = load_settings("user_settings.json")
     
     # Initial prompt for loading defaults
-    def check(reaction, user):
-        return user == ctx.author and reaction.message.id == msg.id and str(reaction.emoji) in ['✅', '❌']
-    
-    msg = await ctx.send("Do you want to load the default settings? (✅/❌)")
-    for emoji in ['✅', '❌']:
-        await msg.add_reaction(emoji)
+    await interaction.response.send_message("Do you want to load the default settings? (✅/❌)")
+    msg = await interaction.original_response()
+    await msg.add_reaction('✅')
+    await msg.add_reaction('❌')
 
-    reaction, _ = await ctx.bot.wait_for('reaction_add', check=check)
+    def check(reaction, user):
+        return user == interaction.user and str(reaction.emoji) in ['✅', '❌']
+
+    reaction, _ = await interaction.client.wait_for('reaction_add', timeout=60.0, check=check)
     if str(reaction.emoji) == '✅':
         settings = load_settings("default_settings.json")
-        await ctx.send("Default settings loaded.")
-    
+        await interaction.followup.send("Default settings loaded.")
+    await msg.delete()
+
     # Modify settings
     for key, setting in settings.items():
-        await ctx.send(f"Setting: {key}, Current Value: {setting['value']}")
         if setting['type'] == 'choice':
-            message = await ctx.send(f"Choose a value for {key}: {' '.join(setting['choices'])}")
-            for choice in setting['choices']:
-                await message.add_reaction(emoji_choice(choice))
-            reaction, _ = await ctx.bot.wait_for('reaction_add', check=lambda r, u: r.message.id == message.id and str(r.emoji) in setting['choices'])
-            settings[key]['value'] = str(reaction.emoji)
+            message_text = f"Choose a value for {key}: " + ' '.join([f"{k} {v}" for k, v in setting['choices'].items()])
+            msg = await interaction.followup.send(message_text)
+            for emoji in setting['choices'].values():
+                await msg.add_reaction(emoji)
+
+            def reaction_check(reaction, user):
+                return user == interaction.user and str(reaction.emoji) in setting['choices'].values()
+
+            reaction, _ = await interaction.client.wait_for('reaction_add', timeout=60.0, check=reaction_check)
+            settings[key]['value'] = [k for k, v in setting['choices']. items() if v == str(reaction.emoji)][0]
+            await msg.delete()
+
         else:
-            def check(m):
-                return m.author == ctx.author and m.channel == ctx.channel
-            await ctx.send(f"Please type a new value for {key}:")
-            message = await ctx.bot.wait_for('message', check=check)
+            prompt_msg = await interaction.followup.send(f"Please type a new value for {key} in this channel:")
+            def message_check(m):
+                return m.author == interaction.user and m.channel == interaction.channel
+
+            message = await interaction.client.wait_for('message', timeout=120.0, check=message_check)
             settings[key]['value'] = message.content
+            await prompt_msg.delete()
+            await message.delete()
 
     # Final prompt for saving
-    msg = await ctx.send("Do you want to save the changes to user_settings.json? If yes Settings will persist across sessions. (✅/❌)")
-    for emoji in ['✅', '❌']:
-        await msg.add_reaction(emoji)
+    msg = await interaction.followup.send("Do you want to save the changes? (✅/❌)")
+    await msg.add_reaction('✅')
+    await msg.add_reaction('❌')
     
-    reaction, _ = await ctx.bot.wait_for('reaction_add', check=check)
+    reaction, _ = await interaction.client.wait_for('reaction_add', timeout=60.0, check=check)
+    await msg.delete()
     if str(reaction.emoji) == '✅':
         save_settings_to_file(settings, "user_settings.json")
-        await ctx.send("Settings have been saved.")
+        save_msg = await interaction.followup.send("Settings have been saved.")
+        await save_msg.delete(delay=5)
     else:
-        await ctx.send("Changes not saved.")
+        save_msg = await interaction.followup.send("Changes not saved.")
+        await save_msg.delete(delay=5)
 
 def load_settings(filename):
-    with open(filename, 'r') as f:
-        return json.load(f)
+    try:
+        with open(filename, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}  # Return an empty dict if the file does not exist
 
 def save_settings_to_file(settings, filename):
-    with open(filename, 'w') as f:
+    with open(filename, 'w', encoding='utf-8') as f:
         json.dump(settings, f, indent=4)
-
-def emoji_choice(choice):
-    return {
-        "A": "🅰", "B": "🅱", "C": "C",
-        "Yes": "✅", "No": "❌"
-    }.get(choice, choice)

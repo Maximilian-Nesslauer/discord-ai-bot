@@ -1,0 +1,22 @@
+{
+    "option1": {
+        "type": "choice",
+        "value": "B",
+        "choices": {
+            "A": "\ud83c\udd70",
+            "B": "\ud83c\udd71"
+        }
+    },
+    "option2": {
+        "type": "value",
+        "value": "123"
+    },
+    "option3": {
+        "type": "choice",
+        "value": "No",
+        "choices": {
+            "Yes": "\u2705",
+            "No": "\u274c"
+        }
+    }
+}
