@@ -16,8 +16,7 @@ async def handle_settings_command(ctx, logger):
     await msg.delete()
     if str(reaction.emoji) == '✅':
         settings = load_settings("default_settings.json")
-        confirm_msg = await ctx.send("Default settings loaded.")
-        await confirm_msg.delete(delay=5)
+        await ctx.send("Default settings loaded.", delete_after=5)
     
     # Modify settings
     for key, setting in settings.items():
@@ -49,17 +48,19 @@ async def handle_settings_command(ctx, logger):
     await msg.add_reaction('❌')
     
     reaction, _ = await ctx.bot.wait_for('reaction_add', check=check)
+    await msg.delete()
     if str(reaction.emoji) == '✅':
         save_settings_to_file(settings, "user_settings.json")
-        save_confirm_msg = await ctx.send("Settings have been saved.")
+        await ctx.send("Settings have been saved.", delete_after=5)
     else:
-        save_confirm_msg = await ctx.send("Changes not saved.")
-    await msg.delete()
-    await save_confirm_msg.delete(delay=5)
+        await ctx.send("Changes not saved.", delete_after=5)
 
 def load_settings(filename):
-    with open(filename, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    try:
+        with open(filename, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}  # Return an empty dict if the file does not exist
 
 def save_settings_to_file(settings, filename):
     with open(filename, 'w', encoding='utf-8') as f:

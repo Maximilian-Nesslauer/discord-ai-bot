@@ -2,9 +2,10 @@ import discord
 from discord.ext import commands
 from loguru import logger
 from dotenv import load_dotenv
+import os
 from settings import handle_settings_command
 
-import os
+load_dotenv() 
 bot_token = os.getenv('DISCORD_BOT_TOKEN')
 
 intents = discord.Intents.default()
@@ -27,7 +28,8 @@ async def settings(ctx):
     logger.info(f"Settings command called by {ctx.author}")
     await handle_settings_command(ctx, logger)
 
-try:
-    bot.run(bot_token)
-except Exception as e:
-    logger.error(f"Error running bot: {e}")
+if __name__ == "__main__":
+    try:
+        bot.run(bot_token)
+    except Exception as e:
+        logger.error(f"Error running bot: {e}")
