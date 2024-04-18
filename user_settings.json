@@ -4,8 +4,7 @@
         "value": "B",
         "choices": {
             "A": "\ud83c\udd70",
-            "B": "\ud83c\udd71",
-            "C": "\ud83c\udde8"
+            "B": "\ud83c\udd71"
         }
     },
     "option2": {
@@ -14,7 +13,7 @@
     },
     "option3": {
         "type": "choice",
-        "value": "Yes",
+        "value": "No",
         "choices": {
             "Yes": "\u2705",
             "No": "\u274c"

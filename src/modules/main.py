@@ -1,5 +1,7 @@
+import sys
 import discord
 from discord.ext import commands
+from discord import app_commands
 from loguru import logger
 from dotenv import load_dotenv
 import os
@@ -8,25 +10,36 @@ from settings import handle_settings_command
 load_dotenv() 
 bot_token = os.getenv('DISCORD_BOT_TOKEN')
 
-intents = discord.Intents.default()
-intents.messages = True
-intents.message_content = True
-intents.reactions = True
-intents.guilds = True
-
 logger.add("./logs/bot_logs.log", rotation="50 MB")
 
-bot = commands.Bot(command_prefix='!', intents=intents)
+class DiscordBot(discord.Client):
+    '''The discord client class for the bot'''
 
-@bot.event
-async def on_ready():
-    logger.info(f'Logged in as {bot.user}!')
+    def __init__(self, *, intents: discord.Intents):
+        super().__init__(intents=intents)
+        self.slash_command_tree = app_commands.CommandTree(self)
 
-@bot.command()
-@commands.has_role('discord-llm-bot-admin')
-async def settings(ctx):
-    logger.info(f"Settings command called by {ctx.author}")
-    await handle_settings_command(ctx, logger)
+    async def on_ready(self):
+        """Log the bot's readiness state with user details"""
+        ready_logger = logger.bind(user=self.user.name, userid=self.user.id)
+        ready_logger.info("Login Successful")
+        await self.slash_command_tree.sync()
+
+bot = DiscordBot(intents=discord.Intents.all())
+
+@bot.slash_command_tree.command(name='settings', description='Manage bot settings')
+@app_commands.checks.has_role('discord-llm-bot-admin')
+async def settings(interaction: discord.Interaction):
+    logger.info(f"Settings command called by {interaction.user}")
+    await handle_settings_command(interaction, logger)
+
+async def quit_exit():
+    '''Gracefully shuts down the bot and logs the shutdown'''
+    # Perform cleanup tasks here if needed before exiting
+    # Close resources, finish ongoing tasks, etc.
+    logger.info("Shutting down.")
+    await bot.close()
+    sys.exit(0)
 
 if __name__ == "__main__":
     try:
