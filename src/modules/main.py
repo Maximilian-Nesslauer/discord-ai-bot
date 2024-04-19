@@ -1,13 +1,14 @@
+import os
 import sys
+
 import discord
 from discord.ext import commands
 from discord import app_commands
 from loguru import logger
 from dotenv import load_dotenv
-import os
 from settings import handle_settings_command
 
-load_dotenv() 
+load_dotenv()
 bot_token = os.getenv('DISCORD_BOT_TOKEN')
 
 logger.add("./logs/bot_logs.log", rotation="50 MB")
@@ -25,13 +26,29 @@ class DiscordBot(discord.Client):
         ready_logger.info("Login Successful")
         await self.slash_command_tree.sync()
 
+    async def ensure_admin_channel(self, guild):
+        """Ensure the llm-bot-admin channel exists with correct permissions"""
+        for channel in guild.channels:
+            if channel.name == 'llm-bot-admin' and isinstance(channel, discord.TextChannel):
+                return channel
+        
+        # Create the channel if it does not exist
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(read_messages=False),
+            guild.me: discord.PermissionOverwrite(read_messages=True),
+            discord.utils.get(guild.roles, name='discord-llm-bot-admin'): discord.PermissionOverwrite(read_messages=True)
+        }
+        return await guild.create_text_channel('llm-bot-admin', overwrites=overwrites)
+
 bot = DiscordBot(intents=discord.Intents.all())
 
 @bot.slash_command_tree.command(name='settings', description='Manage bot settings')
 @app_commands.checks.has_role('discord-llm-bot-admin')
 async def settings(interaction: discord.Interaction):
     logger.info(f"Settings command called by {interaction.user}")
-    await handle_settings_command(interaction, logger)
+    await interaction.response.defer()  # Defer the response to handle it in the admin channel
+    admin_channel = await bot.ensure_admin_channel(interaction.guild)
+    await handle_settings_command(interaction, logger, admin_channel)
 
 async def quit_exit():
     '''Gracefully shuts down the bot and logs the shutdown'''
