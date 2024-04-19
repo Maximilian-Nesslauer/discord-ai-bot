@@ -7,9 +7,11 @@ from discord import app_commands
 from loguru import logger
 from dotenv import load_dotenv
 from settings import handle_settings_command
+from utils import load_config
 
 load_dotenv()
 bot_token = os.getenv('DISCORD_BOT_TOKEN')
+config = load_config("config.json")
 
 logger.add("./logs/bot_logs.log", rotation="50 MB")
 
@@ -43,8 +45,10 @@ class DiscordBot(discord.Client):
 bot = DiscordBot(intents=discord.Intents.all())
 
 @bot.slash_command_tree.command(name='settings', description='Manage bot settings')
-@app_commands.checks.has_role('discord-llm-bot-admin')
 async def settings(interaction: discord.Interaction):
+    if config['require_admin_role'] and not any(role.name == 'discord-llm-bot-admin' for role in interaction.user.roles):
+        await interaction.response.send_message("You do not have the required role to use this command.", ephemeral=True)
+        return
     logger.info(f"Settings command called by {interaction.user}")
     await interaction.response.defer()  # Defer the response to handle it in the admin channel
     admin_channel = await bot.ensure_admin_channel(interaction.guild)
