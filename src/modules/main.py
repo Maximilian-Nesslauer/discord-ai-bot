@@ -37,9 +37,10 @@ class DiscordBot(discord.Client):
         # Create the channel if it does not exist
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(read_messages=False),
-            guild.me: discord.PermissionOverwrite(read_messages=True),
-            discord.utils.get(guild.roles, name='discord-llm-bot-admin'): discord.PermissionOverwrite(read_messages=True)
+            guild.me: discord.PermissionOverwrite(read_messages=True)
         }
+        if config['require_admin_role']:
+            overwrites[discord.utils.get(guild.roles, name='discord-llm-bot-admin')] = discord.PermissionOverwrite(read_messages=True)
         return await guild.create_text_channel('llm-bot-admin', overwrites=overwrites)
 
 bot = DiscordBot(intents=discord.Intents.all())
@@ -47,7 +48,7 @@ bot = DiscordBot(intents=discord.Intents.all())
 @bot.slash_command_tree.command(name='settings', description='Manage bot settings')
 async def settings(interaction: discord.Interaction):
     if config['require_admin_role'] and not any(role.name == 'discord-llm-bot-admin' for role in interaction.user.roles):
-        await interaction.response.send_message("You do not have the required role to use this command.", ephemeral=True)
+        role_missing_bot_admin_msg = await interaction.response.send_message("You do not have the required role to use this command.", ephemeral=True, delete_after=10)
         return
     logger.info(f"Settings command called by {interaction.user}")
     await interaction.response.defer()  # Defer the response to handle it in the admin channel

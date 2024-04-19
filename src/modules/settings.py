@@ -73,6 +73,9 @@ async def handle_settings_command(interaction, logger, admin_channel):
         save_msg = await admin_channel.send("Changes not saved.")
         if config['delete_messages']:
             await save_msg.delete(delay=5)
+    
+    settings_update_complete_msg = await interaction.followup.send("Settings update complete.")
+    await settings_update_complete_msg.delete(delay=5)
 
 def load_settings(filename):
     try:

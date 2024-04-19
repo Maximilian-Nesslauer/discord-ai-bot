@@ -1,7 +1,7 @@
 {
     "option1": {
         "type": "choice",
-        "value": "A",
+        "value": "B",
         "choices": {
             "A": "\ud83c\udd70",
             "B": "\ud83c\udd71"
@@ -9,7 +9,7 @@
     },
     "option2": {
         "type": "value",
-        "value": "1234"
+        "value": "789wqwe"
     },
     "option3": {
         "type": "choice",
