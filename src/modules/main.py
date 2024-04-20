@@ -9,6 +9,7 @@ from loguru import logger
 from dotenv import load_dotenv
 from settings import handle_settings_command
 from utils import load_config
+from conversationQueue import ConversationQueue
 
 load_dotenv()
 bot_token = os.getenv('DISCORD_BOT_TOKEN')
@@ -23,6 +24,21 @@ class DiscordBot(discord.Client):
         super().__init__(intents=intents)
         self.slash_command_tree = app_commands.CommandTree(self)
         self.settings_lock = asyncio.Lock()
+        self.queue = ConversationQueue(self)
+
+    async def on_message(self, message: discord.Message):
+        if message.author == self.user:
+            return  # Ignore messages sent by the bot itself
+
+        bot_mention = f'<@{self.user.id}>'
+        if message.content.lower().startswith('hey llm bot') or bot_mention in message.content.lower() or message.reference and message.reference.resolved.author == self.user:
+            content = message.content
+            if content.lower().startswith('hey llm bot'):
+                content = content[10:]  # Remove "hey llm bot" from the start of the message
+            elif bot_mention in content.lower():
+                content = content.replace(bot_mention, '', 1)  # Remove the bot's mention from the message
+            await self.queue.add_conversation(message.channel.id, message.author.id, content, 'user')
+            logger.info(f"Added message to queue: {content}")
 
     async def on_ready(self):
         """Log the bot's readiness state with user details"""

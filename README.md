@@ -6,7 +6,7 @@ Discord Bot that uses a LLM to chat with users
 
 This project aims to create a Discord bot that enables users to chat with an LLM.
 
-The bot will initially connect to external APIs like oobabooga's text-generation-webui (<https://github.com/oobabooga/text-generation-webui>) to make use of its multiple modal backends.
+The bot will initially connect to external APIs like oobabooga's text-generation-webui (<https://github.com/oobabooga/text-generation-webui>), groq (<https://groq.com/>), OpenAI's gpt-4 API (<https://openai.com/product>) or any other OpenAI API style API.
 
 Future Enhancements will include local model hosting and integrating image generation capabilities.
 

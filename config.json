@@ -1,4 +1,4 @@
 {
-    "delete_messages": false,
+    "delete_messages": true,
     "require_admin_role": true
 }
