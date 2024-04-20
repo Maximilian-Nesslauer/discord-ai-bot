@@ -31,10 +31,10 @@ class DiscordBot(discord.Client):
             return  # Ignore messages sent by the bot itself
 
         bot_mention = f'<@{self.user.id}>'
-        if message.content.lower().startswith('hey llm bot') or bot_mention in message.content.lower() or message.reference and message.reference.resolved.author == self.user:
+        if message.content.lower().startswith('hey llm') or bot_mention in message.content.lower() or message.reference and message.reference.resolved.author == self.user:
             content = message.content
-            if content.lower().startswith('hey llm bot'):
-                content = content[10:]  # Remove "hey llm bot" from the start of the message
+            if content.lower().startswith('hey llm'):
+                content = content[8:]  # Remove "hey llm " from the start of the message
             elif bot_mention in content.lower():
                 content = content.replace(bot_mention, '', 1)  # Remove the bot's mention from the message
             await self.queue.add_conversation(message.channel.id, message.author.id, content, 'user')
@@ -45,6 +45,7 @@ class DiscordBot(discord.Client):
         ready_logger = logger.bind(user=self.user.name, userid=self.user.id)
         ready_logger.info("Login Successful")
         await self.slash_command_tree.sync()
+        self.loop.create_task(self.queue.process_conversation())
 
     async def ensure_admin_channel(self, guild):
         """Ensure the llm-bot-admin channel exists with correct permissions"""
