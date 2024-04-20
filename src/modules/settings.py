@@ -10,9 +10,9 @@ async def handle_settings_command(interaction, logger, admin_channel):
     # Redirect interaction to the admin channel
     initial_msg = await admin_channel.send(f"{interaction.user.mention}, let's manage the settings here.")
     if config['delete_messages']:
-        await initial_msg.delete(delay=20)    
-    
-    # Initial prompt for loading defaults
+        await initial_msg.delete(delay=20)
+
+    # Manage settings with reactions for yes/no
     msg = await admin_channel.send("Do you want to load the default settings?")
     await msg.add_reaction('✅')
     await msg.add_reaction('❌')
@@ -29,7 +29,7 @@ async def handle_settings_command(interaction, logger, admin_channel):
     if config['delete_messages']:
         await msg.delete()
 
-    # Modify settings
+    # Handle value modifications based on type
     for key, setting in settings.items():
         if setting['type'] == 'choice':
             message_text = f"Choose a value for {key}: " + ' ; '.join([f"{k} ({v})" for k, v in setting['choices'].items()])
@@ -45,10 +45,10 @@ async def handle_settings_command(interaction, logger, admin_channel):
             if config['delete_messages']:
                 await msg.delete()
 
-        else:
-            prompt_msg = await admin_channel.send(f"Please type a new value for {key} in this channel:")
+        elif setting['type'] == 'value':
+            prompt_msg = await admin_channel.send(f"Please type a new numerical value for {key} in this channel:")
             def message_check(m):
-                return m.author == interaction.user and m.channel == admin_channel
+                return m.author == interaction.user and m.channel == admin_channel and m.content.isdigit() # only accept numerical values to prevent injection attacks
 
             message = await interaction.client.wait_for('message', timeout=120.0, check=message_check)
             settings[key]['value'] = message.content
@@ -56,11 +56,11 @@ async def handle_settings_command(interaction, logger, admin_channel):
                 await prompt_msg.delete()
                 await message.delete()
 
-    # Final prompt for saving
+    # Final confirmation for saving changes
     msg = await admin_channel.send("Do you want to save the changes?")
     await msg.add_reaction('✅')
     await msg.add_reaction('❌')
-    
+
     reaction, _ = await interaction.client.wait_for('reaction_add', timeout=60.0, check=check)
     if config['delete_messages']:
         await msg.delete()
@@ -73,7 +73,7 @@ async def handle_settings_command(interaction, logger, admin_channel):
         save_msg = await admin_channel.send("Changes not saved.")
         if config['delete_messages']:
             await save_msg.delete(delay=5)
-    
+
     settings_update_complete_msg = await interaction.followup.send("Settings update complete.")
     await settings_update_complete_msg.delete(delay=5)
 
