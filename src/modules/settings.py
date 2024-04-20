@@ -7,10 +7,11 @@ async def handle_settings_command(interaction, logger, admin_channel):
     config = load_config("config.json")
     settings = load_settings("./src/settings/user_settings.json")
 
-    # Redirect interaction to the admin channel
-    initial_msg = await admin_channel.send(f"{interaction.user.mention}, let's manage the settings here.")
-    if config['delete_messages']:
-        await initial_msg.delete(delay=20)
+    # Redirect interaction to the admin channel if not already in admin channel
+    if interaction.channel != admin_channel:
+        initial_msg = await admin_channel.send(f"{interaction.user.mention}, let's manage the settings here.")
+        if config['delete_messages']:
+            await initial_msg.delete(delay=20)
 
     # Manage settings with reactions for yes/no
     msg = await admin_channel.send("Do you want to load the default settings?")
