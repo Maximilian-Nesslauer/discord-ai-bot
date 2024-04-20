@@ -1,5 +1,6 @@
 import os
 import sys
+import asyncio
 
 import discord
 from discord.ext import commands
@@ -21,6 +22,7 @@ class DiscordBot(discord.Client):
     def __init__(self, *, intents: discord.Intents):
         super().__init__(intents=intents)
         self.slash_command_tree = app_commands.CommandTree(self)
+        self.settings_lock = asyncio.Lock()
 
     async def on_ready(self):
         """Log the bot's readiness state with user details"""
@@ -50,10 +52,16 @@ async def settings(interaction: discord.Interaction):
     if config['require_admin_role'] and not any(role.name == 'discord-llm-bot-admin' for role in interaction.user.roles):
         role_missing_bot_admin_msg = await interaction.response.send_message("You do not have the required role to use this command.", ephemeral=True, delete_after=10)
         return
-    logger.info(f"Settings command called by {interaction.user}")
-    await interaction.response.defer()  # Defer the response to handle it in the admin channel
-    admin_channel = await bot.ensure_admin_channel(interaction.guild)
-    await handle_settings_command(interaction, logger, admin_channel)
+
+    if not bot.settings_lock.locked():
+        async with bot.settings_lock:
+            logger.info(f"Settings command called by {interaction.user}")
+            await interaction.response.defer()  # Defer the response to handle it in the admin channel
+            admin_channel = await bot.ensure_admin_channel(interaction.guild)
+            await handle_settings_command(interaction, logger, admin_channel)
+    else:
+        await interaction.response.send_message("Settings are currently being modified by another user. Please try again later.", ephemeral=True, delete_after=10)
+
 
 async def quit_exit():
     '''Gracefully shuts down the bot and logs the shutdown'''
