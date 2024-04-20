@@ -47,14 +47,26 @@ async def handle_settings_command(interaction, logger, admin_channel):
 
         elif setting['type'] == 'value':
             prompt_msg = await admin_channel.send(f"Please type a new numerical value for {key} in this channel:")
-            def message_check(m):
-                return m.author == interaction.user and m.channel == admin_channel and m.content.isdigit() # only accept numerical values to prevent injection attacks
 
-            message = await interaction.client.wait_for('message', timeout=120.0, check=message_check)
-            settings[key]['value'] = message.content
-            if config['delete_messages']:
-                await prompt_msg.delete()
-                await message.delete()
+            valid_input = False
+            while not valid_input:
+                def message_check(m):
+                    # check if the correct user is responding in the correct channel
+                    return m.author == interaction.user and m.channel == admin_channel
+
+                message = await interaction.client.wait_for('message', timeout=120.0, check=message_check)
+                if message.content.isdigit():
+                    settings[key]['value'] = message.content
+                    valid_input = True
+                    if config['delete_messages']:
+                        await prompt_msg.delete()
+                        await message.delete()
+                else:
+                    invalid_input_msg = await admin_channel.send("Invalid input. Please enter a numerical value.")
+                    if config['delete_messages']:
+                        await message.delete()
+                        await invalid_input_msg.delete(delay=10)
+
 
     # Final confirmation for saving changes
     msg = await admin_channel.send("Do you want to save the changes?")
