@@ -1,22 +1,23 @@
 {
-    "option1": {
+    "model": {
         "type": "choice",
-        "value": "A",
+        "value": "Llama3-70b-8192",
         "choices": {
-            "A": "\ud83c\udd70",
-            "B": "\ud83c\udd71"
+            "Llama3-70b-8192": "1\ufe0f\u20e3",
+            "llama3-8b-8192": "2\ufe0f\u20e3",
+            "mixtral-8x7b-32768": "3\ufe0f\u20e3"
         }
     },
-    "option2": {
+    "temperature": {
         "type": "value",
-        "value": "123"
+        "value": 0.7
     },
-    "option3": {
-        "type": "choice",
-        "value": "No",
-        "choices": {
-            "Yes": "\u2705",
-            "No": "\u274c"
-        }
+    "max_tokens": {
+        "type": "value",
+        "value": 1024
+    },
+    "system_prompt": {
+        "type": "string",
+        "value": "You are a highly skilled and helpful AI assistant."
     }
 }
