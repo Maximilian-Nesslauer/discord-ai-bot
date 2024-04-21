@@ -1,6 +1,7 @@
 import asyncio
 import os
 import json
+from loguru import logger
 from datetime import datetime
 from groq import Groq
 from utils import load_config
@@ -45,7 +46,7 @@ class ConversationQueue():
                 messages=messages,
                 model=conversation_log["model"],
                 temperature=0.7,
-                max_tokens=512,
+                max_tokens=1024,
                 top_p=1,
                 stream=False
             )
@@ -68,3 +69,27 @@ class ConversationQueue():
         log_file = f"./logs/conversations/{conversation_id}.json"
         with open(log_file, "w") as f:
             json.dump(self.conversation_logs[conversation_id], f, indent=4)
+
+    def clear_conversation_log(self, conversation_id, user_id):
+        log_file = f"./logs/conversations/{conversation_id}.json"
+        if os.path.exists(log_file):
+            try:
+                with open(log_file, "r") as f:
+                    conversation_log = json.load(f)
+                    if conversation_log["user_id"] == user_id:
+                        if self.queue.qsize() == 0:
+                            self.conversation_logs.pop(conversation_id, None)
+                            f.close()
+                            os.remove(log_file)
+                            logger.info(f"Conversation log cleared for {conversation_id}.")
+                            return "Conversation log cleared."
+                        else:
+                            return "Cannot clear conversation log while messages are in the queue."
+                    else:
+                        return "You can only clear conversations that you started."
+            except Exception as e:
+                logger.error(f"Failed to clear conversation log for {conversation_id}: {e}")
+                return "Failed to access or clear the conversation log due to an error."
+        else:
+            logger.error(f"Conversation log file not found for {conversation_id}.")
+            return "No conversation log file found."

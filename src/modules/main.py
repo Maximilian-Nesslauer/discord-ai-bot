@@ -64,6 +64,17 @@ class DiscordBot(discord.Client):
 
 bot = DiscordBot(intents=discord.Intents.all())
 
+@bot.slash_command_tree.command(name='clearllmconversation', description='Clear the conversation log of the current channel')
+async def clear_conversation(interaction: discord.Interaction):
+    channel_id = interaction.channel_id
+    user_id = interaction.user.id
+    conversation_id = f"{channel_id}_{user_id}"
+    
+    message = bot.queue.clear_conversation_log(conversation_id, user_id)
+    await interaction.response.send_message(message, ephemeral=True, delete_after=10)
+    logger.info(f"Clear conversation attempt by user {user_id} in channel {channel_id}: {message}")
+
+
 @bot.slash_command_tree.command(name='settings', description='Manage bot settings')
 async def settings(interaction: discord.Interaction):
     if config['require_admin_role'] and not any(role.name == 'discord-llm-bot-admin' for role in interaction.user.roles):
