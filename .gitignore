@@ -1,4 +1,5 @@
-logs
+logs/bot_logs.log
+logs/conversations/*
 
 
 # Byte-compiled / optimized / DLL files

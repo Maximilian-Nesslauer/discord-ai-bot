@@ -17,7 +17,7 @@ class ConversationQueue():
 
     async def add_conversation(self, channel_id, user_id, message, role, create_empty=False):
         conversation_id = f"{channel_id}_{user_id}"
-        settings = load_settings("./src/settings/user_settings.json")  # Load settings
+        settings = load_settings("./src/settings/user_settings.json")
 
         if conversation_id not in self.conversation_logs:
             timestamp = datetime.now().isoformat()
@@ -65,10 +65,9 @@ class ConversationQueue():
             conversation_log["messages"].append({"role": "assistant", "content": answer})
             self.save_conversation_log(conversation_id)
             
-            # Send the answer to Discord
             channel = self.bot.get_channel(conversation_log["channel_id"])
 
-            # Split the answer into multiple messages to handle discord message limits
+            # Split the answer into multiple messages to handle discord message limits and send them to the channel
             chunks = [answer[i:i+1900] for i in range(0, len(answer), 1900)]
             for chunk in chunks:
                 await channel.send(chunk)
