@@ -64,6 +64,23 @@ class DiscordBot(discord.Client):
 bot = DiscordBot(intents=discord.Intents.all())
 
 
+
+@bot.slash_command_tree.command(name='setupllm', description='Print a welcome message to set up the LLM bot for users')
+async def setup_llm(interaction: discord.Interaction):
+    channel = interaction.channel
+
+    welcome_message = (
+        "Welcome to the LLM bot!\n\n\n"
+        "To start a new conversation with the bot, use the command `/newllmconversation`.\n\n"
+        "To talk to the bot, simply mention the bot or start your message with 'hey llm'.\n"
+        "The bot will respond to your messages and engage in a conversation with you.\n\n"
+        "Use the /settings command to change the settings of the conversation\n"
+        "Use the /clearllmconversation command to clear the conversation history of the current channel. Do this regularly to maintain the LLMs output quality.\n\n"
+        "Enjoy your conversation with the LLM bot!"
+    )
+    await channel.send(welcome_message)
+
+
 @bot.slash_command_tree.command(name='newllmconversation', description='Start a new LLM conversation channel')
 async def new_llm_conversation(interaction: discord.Interaction):
     guild = interaction.guild
