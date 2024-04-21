@@ -63,6 +63,25 @@ class DiscordBot(discord.Client):
 
 bot = DiscordBot(intents=discord.Intents.all())
 
+
+@bot.slash_command_tree.command(name='newllmconversation', description='Start a new LLM conversation channel')
+async def new_llm_conversation(interaction: discord.Interaction):
+    guild = interaction.guild
+    user = interaction.user
+
+    # Create a new private channel with the user's name
+    channel_name = f'llm-{user.name}'
+    overwrites = {
+        guild.default_role: discord.PermissionOverwrite(read_messages=False),
+        guild.me: discord.PermissionOverwrite(read_messages=True),
+        user: discord.PermissionOverwrite(read_messages=True)
+    }
+    new_channel = await guild.create_text_channel(channel_name, overwrites=overwrites)
+
+    # Send a message in the new channel
+    await new_channel.send(f"Hey {user.mention}, lets start our conversation here.")
+
+
 @bot.slash_command_tree.command(name='clearllmconversation', description='Clear the conversation log of the current channel')
 async def clear_conversation(interaction: discord.Interaction):
     channel_id = interaction.channel_id
@@ -71,6 +90,11 @@ async def clear_conversation(interaction: discord.Interaction):
     
     message = bot.queue.clear_conversation_log(conversation_id, user_id)
     await interaction.response.send_message(message, ephemeral=True, delete_after=10)
+
+    channel = interaction.channel
+    user_name = interaction.user.name
+    if user_name.lower() in channel.name.lower():
+        await channel.delete()
     logger.info(f"Clear conversation attempt by user {user_id} in channel {channel_id}: {message}")
 
 
