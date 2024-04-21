@@ -15,7 +15,7 @@ class ConversationQueue():
         self.llm_client = Groq(api_key=os.getenv('GROQ_API_KEY'))
 
 
-    async def add_conversation(self, channel_id, user_id, message, role):
+    async def add_conversation(self, channel_id, user_id, message, role, create_empty=False):
         conversation_id = f"{channel_id}_{user_id}"
         settings = load_settings("./src/settings/user_settings.json")  # Load settings
 
@@ -31,9 +31,13 @@ class ConversationQueue():
                 "system_prompt": settings["system_prompt"]["value"],
                 "messages": [{"role": "system", "content": settings["system_prompt"]["value"]}]
             }
-        self.conversation_logs[conversation_id]["messages"].append({"role": role, "content": message})
-        self.save_conversation_log(conversation_id)
-        await self.queue.put((conversation_id, message))
+        if not create_empty:
+            self.conversation_logs[conversation_id]["messages"].append({"role": role, "content": message})
+            self.save_conversation_log(conversation_id)
+            await self.queue.put((conversation_id, message))
+        else:
+            self.save_conversation_log(conversation_id)
+            
 
     async def get_conversation(self):
         conversation_id, message = await self.queue.get()

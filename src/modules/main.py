@@ -36,7 +36,7 @@ class DiscordBot(discord.Client):
                 content = content[8:]  # Remove "hey llm " from the start of the message
             elif bot_mention in content.lower():
                 content = content.replace(bot_mention, '', 1)  # Remove the bot's mention from the message
-            await self.queue.add_conversation(message.channel.id, message.author.id, content, 'user')
+            await self.queue.add_conversation(message.channel.id, message.author.id, content, 'user', create_empty=False)
             logger.info(f"Added message to queue: {content}")
 
     async def on_ready(self):
@@ -69,8 +69,13 @@ bot = DiscordBot(intents=discord.Intents.all())
 async def setup_llm(interaction: discord.Interaction):
     channel = interaction.channel
 
+    await interaction.response.defer()
+
+    msg = await interaction.followup.send("sending welcome message.")
+    await msg.delete(delay=1)
+
     welcome_message = (
-        "Welcome to the LLM bot!\n\n\n"
+        "Welcome to the LLM bot!\n\n"
         "To start a new conversation with the bot, use the command `/newllmconversation`.\n\n"
         "To talk to the bot, simply mention the bot or start your message with 'hey llm'.\n"
         "The bot will respond to your messages and engage in a conversation with you.\n\n"
@@ -85,7 +90,7 @@ async def setup_llm(interaction: discord.Interaction):
 async def new_llm_conversation(interaction: discord.Interaction):
     guild = interaction.guild
     user = interaction.user
-
+    
     # Create a new private channel with the user's name
     channel_name = f'llm-{user.name}'
     overwrites = {
@@ -93,10 +98,20 @@ async def new_llm_conversation(interaction: discord.Interaction):
         guild.me: discord.PermissionOverwrite(read_messages=True),
         user: discord.PermissionOverwrite(read_messages=True)
     }
-    new_channel = await guild.create_text_channel(channel_name, overwrites=overwrites)
 
-    # Send a message in the new channel
-    await new_channel.send(f"Hey {user.mention}, lets start our conversation here.")
+    existing_channel = discord.utils.get(guild.channels, name=channel_name, type=discord.ChannelType.text)
+    if not existing_channel:
+        new_channel = await guild.create_text_channel(channel_name, overwrites=overwrites)
+        await interaction.response.defer()
+
+        msg = await interaction.followup.send("created new channel.")
+        await msg.delete(delay=5)
+
+        # Send a message in the new channel
+        await new_channel.send(f"Hey {user.mention}, lets start our conversation here.")
+        await bot.queue.add_conversation(new_channel.id, user.id, "null", 'user', create_empty=True)
+    else:
+        await interaction.response.send_message(f"Conversation channel already exists for {user.mention}.", ephemeral=True, delete_after=5)
 
 
 @bot.slash_command_tree.command(name='clearllmconversation', description='Clear the conversation log of the current channel')
