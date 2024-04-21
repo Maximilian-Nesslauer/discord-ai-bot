@@ -23,7 +23,6 @@ class DiscordBot(discord.Client):
     def __init__(self, *, intents: discord.Intents):
         super().__init__(intents=intents)
         self.slash_command_tree = app_commands.CommandTree(self)
-        self.settings_lock = asyncio.Lock()
         self.queue = ConversationQueue(self)
 
     async def on_message(self, message: discord.Message):
@@ -77,18 +76,15 @@ async def clear_conversation(interaction: discord.Interaction):
 
 @bot.slash_command_tree.command(name='settings', description='Manage bot settings')
 async def settings(interaction: discord.Interaction):
-    if config['require_admin_role'] and not any(role.name == 'discord-llm-bot-admin' for role in interaction.user.roles):
-        role_missing_bot_admin_msg = await interaction.response.send_message("You do not have the required role to use this command.", ephemeral=True, delete_after=10)
+    # Ensure there's an ongoing conversation in the channel
+    conversation_id = f"{interaction.channel_id}_{interaction.user.id}"
+    if conversation_id not in bot.queue.conversation_logs:
+        await interaction.response.send_message("No active conversation found in this channel.", ephemeral=True, delete_after=10)
         return
-
-    if not bot.settings_lock.locked():
-        async with bot.settings_lock:
-            logger.info(f"Settings command called by {interaction.user}")
-            await interaction.response.defer()  # Defer the response to handle it in the admin channel
-            admin_channel = await bot.ensure_admin_channel(interaction.guild)
-            await handle_settings_command(interaction, logger, admin_channel)
-    else:
-        await interaction.response.send_message("Settings are currently being modified by another user. Please try again later.", ephemeral=True, delete_after=10)
+    
+    logger.info(f"Settings command called by {interaction.user}")
+    await interaction.response.defer()
+    await handle_settings_command(bot, interaction, logger)
 
 
 async def quit_exit():

@@ -5,6 +5,7 @@ from loguru import logger
 from datetime import datetime
 from groq import Groq
 from utils import load_config
+from settings import load_settings
 
 class ConversationQueue():
     def __init__(self, bot):
@@ -16,17 +17,20 @@ class ConversationQueue():
 
     async def add_conversation(self, channel_id, user_id, message, role):
         conversation_id = f"{channel_id}_{user_id}"
+        settings = load_settings("./src/settings/user_settings.json")  # Load settings
+
         if conversation_id not in self.conversation_logs:
             timestamp = datetime.now().isoformat()
             self.conversation_logs[conversation_id] = {
                 "channel_id": channel_id,
                 "user_id": user_id,
                 "timestamp": timestamp,
-                "model": "llama3-70b-8192",
-                "messages": []
+                "model": settings["model"]["value"],
+                "temperature": settings["temperature"]["value"],
+                "max_tokens": settings["max_tokens"]["value"],
+                "system_prompt": settings["system_prompt"]["value"],
+                "messages": [{"role": "system", "content": settings["system_prompt"]["value"]}]
             }
-            self.conversation_logs[conversation_id]["messages"].append({"role": "system", "content": "You are a highly skilled and helpful AI assistant."})
-            self.save_conversation_log(conversation_id)
         self.conversation_logs[conversation_id]["messages"].append({"role": role, "content": message})
         self.save_conversation_log(conversation_id)
         await self.queue.put((conversation_id, message))
@@ -45,8 +49,8 @@ class ConversationQueue():
             response = self.llm_client.chat.completions.create(
                 messages=messages,
                 model=conversation_log["model"],
-                temperature=0.7,
-                max_tokens=1024,
+                temperature=conversation_log["temperature"],
+                max_tokens=conversation_log["max_tokens"],
                 top_p=1,
                 stream=False
             )
