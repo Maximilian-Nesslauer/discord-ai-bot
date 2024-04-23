@@ -36,7 +36,7 @@ class DiscordBot(discord.Client):
                 content = content[8:]  # Remove "hey llm " from the start of the message
             elif bot_mention in content.lower():
                 content = content.replace(bot_mention, '', 1)  # Remove the bot's mention from the message
-            await self.queue.add_conversation(message.channel.id, message.author.id, content, 'user', create_empty=False)
+            await self.queue.add_conversation(message.channel.id, message.author.id, content, 'user',message.id, create_empty=False)
             logger.info(f"Added message to queue: {content}")
 
     async def on_ready(self):

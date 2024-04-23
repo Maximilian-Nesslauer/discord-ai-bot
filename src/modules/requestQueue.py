@@ -27,7 +27,7 @@ class RequestQueue():
                         logger.info(f"Loaded conversation log for {conversation_id}")
 
 
-    async def add_conversation(self, channel_id, user_id, message, role, create_empty=False):
+    async def add_conversation(self, channel_id, user_id, message, role,message_id=None, create_empty=False):
         conversation_id = f"{channel_id}_{user_id}"
         settings = load_settings("./src/settings/user_settings.json")  # Load settings
 
@@ -44,7 +44,10 @@ class RequestQueue():
                 "messages": [{"role": "system", "content": settings["system_prompt"]["value"]}]
             }
         if not create_empty:
-            self.conversation_logs[conversation_id]["messages"].append({"role": role, "content": message})
+            message_entry = {"role": role, "content": message, "message_ids": []}
+            if role == 'user':
+                message_entry["message_ids"] = message_id
+            self.conversation_logs[conversation_id]["messages"].append(message_entry)
             self.save_conversation_log(conversation_id)
             await self.queue.put((conversation_id, message))
         else:
@@ -59,7 +62,8 @@ class RequestQueue():
         while True:
             conversation_id, message = await self.get_conversation()
             conversation_log = self.conversation_logs[conversation_id]
-            messages = conversation_log["messages"]
+            
+            messages = [{"role": msg["role"], "content": msg["content"]} for msg in conversation_log["messages"]]
 
             # Call the API
             response = self.llm_client.chat.completions.create(
@@ -72,18 +76,20 @@ class RequestQueue():
             )
 
             answer = response.choices[0].message.content
+            response_message_ids = []
 
-            # Save the answer in the conversation log
-            conversation_log["messages"].append({"role": "assistant", "content": answer})
-            self.save_conversation_log(conversation_id)
-            
             # Send the answer to Discord
             channel = self.bot.get_channel(conversation_log["channel_id"])
 
             # Split the answer into multiple messages to handle discord message limits
             chunks = [answer[i:i+1900] for i in range(0, len(answer), 1900)]
             for chunk in chunks:
-                await channel.send(chunk)
+                message = await channel.send(chunk)
+                response_message_ids.append(message.id)
+
+            # Save the answer and the response message IDs in the conversation log
+            conversation_log["messages"].append({"role": "assistant", "content": answer, "message_ids": response_message_ids})
+            self.save_conversation_log(conversation_id)
             
     def save_conversation_log(self, conversation_id):
         log_folder = "./logs/conversations"
