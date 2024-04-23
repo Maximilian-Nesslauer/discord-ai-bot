@@ -7,15 +7,27 @@ from groq import Groq
 from utils import load_config
 from settings import load_settings
 
-class ConversationQueue():
+log_folder = "./logs/conversations"
+
+class RequestQueue():
     def __init__(self, bot):
         self.queue = asyncio.Queue()
         self.conversation_logs = {}
         self.bot = bot
         self.llm_client = Groq(api_key=os.getenv('GROQ_API_KEY'))
+        
+    def load_conversation_logs(self):
+        if os.path.exists(log_folder):
+            for filename in os.listdir(log_folder):
+                if filename.endswith(".json"):
+                    log_file_path = os.path.join(log_folder, filename)
+                    with open(log_file_path, "r") as file:
+                        conversation_id = filename[:-5]  # Remove '.json' extension
+                        self.conversation_logs[conversation_id] = json.load(file)
+                        logger.info(f"Loaded conversation log for {conversation_id}")
 
 
-    async def add_conversation(self, channel_id, user_id, message, role, create_empty=False):
+    async def add_conversation(self, channel_id, user_id, message, role,message_id=None, create_empty=False):
         conversation_id = f"{channel_id}_{user_id}"
         settings = load_settings("./src/settings/user_settings.json")  # Load settings
 
@@ -32,7 +44,10 @@ class ConversationQueue():
                 "messages": [{"role": "system", "content": settings["system_prompt"]["value"]}]
             }
         if not create_empty:
-            self.conversation_logs[conversation_id]["messages"].append({"role": role, "content": message})
+            message_entry = {"role": role, "content": message, "message_ids": []}
+            if role == 'user':
+                message_entry["message_ids"] = message_id
+            self.conversation_logs[conversation_id]["messages"].append(message_entry)
             self.save_conversation_log(conversation_id)
             await self.queue.put((conversation_id, message))
         else:
@@ -47,7 +62,8 @@ class ConversationQueue():
         while True:
             conversation_id, message = await self.get_conversation()
             conversation_log = self.conversation_logs[conversation_id]
-            messages = conversation_log["messages"]
+            
+            messages = [{"role": msg["role"], "content": msg["content"]} for msg in conversation_log["messages"]]
 
             # Call the API
             response = self.llm_client.chat.completions.create(
@@ -60,21 +76,26 @@ class ConversationQueue():
             )
 
             answer = response.choices[0].message.content
+            response_message_ids = []
 
-            # Save the answer in the conversation log
-            conversation_log["messages"].append({"role": "assistant", "content": answer})
-            self.save_conversation_log(conversation_id)
-            
             # Send the answer to Discord
             channel = self.bot.get_channel(conversation_log["channel_id"])
 
             # Split the answer into multiple messages to handle discord message limits
             chunks = [answer[i:i+1900] for i in range(0, len(answer), 1900)]
             for chunk in chunks:
-                await channel.send(chunk)
+                message = await channel.send(chunk)
+                response_message_ids.append(message.id)
+
+            # Save the answer and the response message IDs in the conversation log
+            conversation_log["messages"].append({"role": "assistant", "content": answer, "message_ids": response_message_ids})
+            self.save_conversation_log(conversation_id)
             
     def save_conversation_log(self, conversation_id):
-        log_file = f"./logs/conversations/{conversation_id}.json"
+        log_folder = "./logs/conversations"
+        if not os.path.exists(log_folder):
+            os.makedirs(log_folder)
+        log_file = f"{log_folder}/{conversation_id}.json"
         with open(log_file, "w") as f:
             json.dump(self.conversation_logs[conversation_id], f, indent=4)
 
