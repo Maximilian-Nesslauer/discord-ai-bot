@@ -9,7 +9,7 @@ from loguru import logger
 from dotenv import load_dotenv
 from settings import handle_settings_command
 from utils import load_config
-from conversationQueue import ConversationQueue
+from requestQueue import RequestQueue
 
 load_dotenv()
 bot_token = os.getenv('DISCORD_BOT_TOKEN')
@@ -23,7 +23,7 @@ class DiscordBot(discord.Client):
     def __init__(self, *, intents: discord.Intents):
         super().__init__(intents=intents)
         self.slash_command_tree = app_commands.CommandTree(self)
-        self.queue = ConversationQueue(self)
+        self.queue = RequestQueue(self)
 
     async def on_message(self, message: discord.Message):
         if message.author == self.user:

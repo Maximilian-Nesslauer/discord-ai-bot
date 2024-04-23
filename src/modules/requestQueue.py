@@ -7,7 +7,7 @@ from groq import Groq
 from utils import load_config
 from settings import load_settings
 
-class ConversationQueue():
+class RequestQueue():
     def __init__(self, bot):
         self.queue = asyncio.Queue()
         self.conversation_logs = {}
