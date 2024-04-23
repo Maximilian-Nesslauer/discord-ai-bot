@@ -43,10 +43,26 @@ class RequestQueue():
                 "system_prompt": settings["system_prompt"]["value"],
                 "messages": [{"role": "system", "content": settings["system_prompt"]["value"]}]
             }
+
         if not create_empty:
+            conversation_log = self.conversation_logs[conversation_id]
+            channel = self.bot.get_channel(conversation_log["channel_id"])
+
+            # delete the reactions from the last message
+            try:
+                last_msg_id = conversation_log['messages'][-1]['message_ids'][-1]
+                if last_msg_id:
+                    last_msg = await channel.fetch_message(last_msg_id)
+                    for reaction in last_msg.reactions:
+                        if reaction.emoji == '🗑️' and reaction.me:
+                            await reaction.remove(self.bot.user)
+            except Exception as e:
+                logger.error(f"Failed to fetch or edit message for reaction removal: {e}")
+
+
             message_entry = {"role": role, "content": message, "message_ids": []}
             if role == 'user':
-                message_entry["message_ids"] = message_id
+                message_entry["message_ids"] = [message_id]
             self.conversation_logs[conversation_id]["messages"].append(message_entry)
             self.save_conversation_log(conversation_id)
             await self.queue.put((conversation_id, message))
@@ -89,6 +105,7 @@ class RequestQueue():
 
             # Save the answer and the response message IDs in the conversation log
             conversation_log["messages"].append({"role": "assistant", "content": answer, "message_ids": response_message_ids})
+            await message.add_reaction('🗑️')
             self.save_conversation_log(conversation_id)
             
     def save_conversation_log(self, conversation_id):
@@ -98,6 +115,43 @@ class RequestQueue():
         log_file = f"{log_folder}/{conversation_id}.json"
         with open(log_file, "w") as f:
             json.dump(self.conversation_logs[conversation_id], f, indent=4)
+
+
+    async def handle_delete_reaction(self, message_id, user_id):
+        for conversation_id, log in self.conversation_logs.items():
+            for msg in log['messages']:
+                if user_id == log['user_id'] and message_id in msg.get('message_ids', []):
+                    is_active = any(item[0] == conversation_id for item in self.queue._queue)
+                    if is_active:
+                        logger.info("Cannot delete messages while messages from the same conversation are processing.")
+                        return
+                    await self.delete_messages(log, conversation_id)
+                    break
+
+    async def delete_messages(self, conversation_log, conversation_id):
+        channel = self.bot.get_channel(conversation_log["channel_id"])
+        for message in reversed(conversation_log['messages']):
+            for msg_id in message['message_ids']:
+                try:
+                    msg = await channel.fetch_message(msg_id)
+                    await msg.delete()
+                except Exception as e:
+                    logger.error(f"Failed to delete message: {e}")
+            conversation_log['messages'].remove(message)
+            if message['role'] == 'user':  # Stop once the last LLM message is deleted
+                break
+        self.save_conversation_log(conversation_id)
+        # Re-add the delete reaction to the new last message if exists
+        if conversation_log['messages']:
+            try:
+                last_msg_id = conversation_log['messages'][-1]['message_ids'][-1]
+                if last_msg_id:
+                    last_msg = await channel.fetch_message(last_msg_id)
+                    await last_msg.add_reaction('🗑️')
+            except Exception as e:
+                logger.info(f"no message to add a reaction to: {e}")
+
+
 
     def clear_conversation_log(self, conversation_id, user_id):
         log_file = f"./logs/conversations/{conversation_id}.json"

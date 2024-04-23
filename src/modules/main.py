@@ -64,6 +64,15 @@ class DiscordBot(discord.Client):
 bot = DiscordBot(intents=discord.Intents.all())
 bot.queue.load_conversation_logs()
 
+@bot.event
+async def on_reaction_add(reaction, user):
+    try:
+        if user == bot.user or reaction.emoji != "🗑️":
+            return
+        
+        await bot.queue.handle_delete_reaction(reaction.message.id, user.id)
+    except Exception as e:
+        logger.error(f"Failed to handle reaction: {e}")
 
 @bot.slash_command_tree.command(name='setupllm', description='Print a welcome message to set up the LLM bot for users')
 async def setup_llm(interaction: discord.Interaction):
