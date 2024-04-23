@@ -74,7 +74,10 @@ class ConversationQueue():
                 await channel.send(chunk)
             
     def save_conversation_log(self, conversation_id):
-        log_file = f"./logs/conversations/{conversation_id}.json"
+        log_folder = "./logs/conversations"
+        if not os.path.exists(log_folder):
+            os.makedirs(log_folder)
+        log_file = f"{log_folder}/{conversation_id}.json"
         with open(log_file, "w") as f:
             json.dump(self.conversation_logs[conversation_id], f, indent=4)
 
