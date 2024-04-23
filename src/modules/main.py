@@ -9,7 +9,7 @@ from loguru import logger
 from dotenv import load_dotenv
 from settings import handle_settings_command
 from utils import load_config
-from conversationQueue import ConversationQueue
+from requestQueue import RequestQueue
 
 load_dotenv()
 bot_token = os.getenv('DISCORD_BOT_TOKEN')
@@ -23,7 +23,7 @@ class DiscordBot(discord.Client):
     def __init__(self, *, intents: discord.Intents):
         super().__init__(intents=intents)
         self.slash_command_tree = app_commands.CommandTree(self)
-        self.queue = ConversationQueue(self)
+        self.queue = RequestQueue(self)
 
     async def on_message(self, message: discord.Message):
         if message.author == self.user:
@@ -36,7 +36,7 @@ class DiscordBot(discord.Client):
                 content = content[8:]  # Remove "hey llm " from the start of the message
             elif bot_mention in content.lower():
                 content = content.replace(bot_mention, '', 1)  # Remove the bot's mention from the message
-            await self.queue.add_conversation(message.channel.id, message.author.id, content, 'user', create_empty=False)
+            await self.queue.add_conversation(message.channel.id, message.author.id, content, 'user',message.id, create_empty=False)
             logger.info(f"Added message to queue: {content}")
 
     async def on_ready(self):
@@ -62,8 +62,20 @@ class DiscordBot(discord.Client):
         return await guild.create_text_channel('llm-bot-admin', overwrites=overwrites)
 
 bot = DiscordBot(intents=discord.Intents.all())
+bot.queue.load_conversation_logs()
 
-
+@bot.event
+async def on_reaction_add(reaction, user):
+    try:
+        if user == bot.user:
+            return
+        
+        if reaction.emoji == "🔄":
+            await bot.queue.handle_reroll_reaction(reaction.message.id, user.id)
+        if reaction.emoji == '🗑️':
+            await bot.queue.handle_delete_reaction(reaction.message.id, user.id)
+    except Exception as e:
+        logger.error(f"Failed to handle reaction: {e}")
 
 @bot.slash_command_tree.command(name='setupllm', description='Print a welcome message to set up the LLM bot for users')
 async def setup_llm(interaction: discord.Interaction):
