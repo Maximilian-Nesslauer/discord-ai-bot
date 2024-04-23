@@ -67,10 +67,13 @@ bot.queue.load_conversation_logs()
 @bot.event
 async def on_reaction_add(reaction, user):
     try:
-        if user == bot.user or reaction.emoji != "🗑️":
+        if user == bot.user:
             return
         
-        await bot.queue.handle_delete_reaction(reaction.message.id, user.id)
+        if reaction.emoji == "🔄":
+            await bot.queue.handle_reroll_reaction(reaction.message.id, user.id)
+        if reaction.emoji == '🗑️':
+            await bot.queue.handle_delete_reaction(reaction.message.id, user.id)
     except Exception as e:
         logger.error(f"Failed to handle reaction: {e}")
 
