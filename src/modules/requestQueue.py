@@ -7,12 +7,24 @@ from groq import Groq
 from utils import load_config
 from settings import load_settings
 
+log_folder = "./logs/conversations"
+
 class RequestQueue():
     def __init__(self, bot):
         self.queue = asyncio.Queue()
         self.conversation_logs = {}
         self.bot = bot
         self.llm_client = Groq(api_key=os.getenv('GROQ_API_KEY'))
+        
+    def load_conversation_logs(self):
+        if os.path.exists(log_folder):
+            for filename in os.listdir(log_folder):
+                if filename.endswith(".json"):
+                    log_file_path = os.path.join(log_folder, filename)
+                    with open(log_file_path, "r") as file:
+                        conversation_id = filename[:-5]  # Remove '.json' extension
+                        self.conversation_logs[conversation_id] = json.load(file)
+                        logger.info(f"Loaded conversation log for {conversation_id}")
 
 
     async def add_conversation(self, channel_id, user_id, message, role, create_empty=False):

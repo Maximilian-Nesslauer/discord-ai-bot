@@ -62,7 +62,7 @@ class DiscordBot(discord.Client):
         return await guild.create_text_channel('llm-bot-admin', overwrites=overwrites)
 
 bot = DiscordBot(intents=discord.Intents.all())
-
+bot.queue.load_conversation_logs()
 
 
 @bot.slash_command_tree.command(name='setupllm', description='Print a welcome message to set up the LLM bot for users')
