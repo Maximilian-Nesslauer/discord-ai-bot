@@ -91,7 +91,7 @@ async def setup_llm(interaction: discord.Interaction):
         "Here's how you can interact with the bot:\n\n"
         "- **Start a new conversation:** Use the command `/newllmconversation`.\n"
         "- **Chat with the bot:** Mention the bot or start your message with 'hey llm'.\n"
-        "- **Adjust settings:** Use the `/settings` command to modify conversation parameters.\n"
+        "- **Adjust settings:** Use the `/settings` command to specify which model to use and to modify conversation parameters.\n"
         "- **Clear history:** Use `/clearllmconversation` to delete the conversation history in this channel. Regular maintenance ensures optimal performance.\n\n"
         "Enjoy your conversations with the LLM bot!"
     )

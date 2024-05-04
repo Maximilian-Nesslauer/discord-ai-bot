@@ -27,6 +27,7 @@ Future Enhancements will include local model hosting and integrating image gener
 ## How to use
 
 - go to <https://discord.com/developers/applications> and get a token for your bot with sufficient permissions -> save your token to .env . Never share this token!
+- If you want to use Ollama: Install Ollama and change the Ollama exe Path in .env
 
 ## TODO
 

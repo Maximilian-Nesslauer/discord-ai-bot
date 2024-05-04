@@ -23,21 +23,9 @@
             },
             "llama3-8b-8192 (via Ollama)": {
                 "emoji": "4️⃣",
-                "model_name": "llama3-8b-8192",
+                "model_name": "llama3",
                 "api_type": "local",
-                "api_url": "http://localhost:5000/api"
-            },
-            "mixtral-8x7b-32768 (via Ollama)": {
-                "emoji": "5️⃣",
-                "model_name": "mixtral-8x7b-32768",
-                "api_type": "local",
-                "api_url": "http://localhost:5000/api"
-            },
-            "llama3-8b-8192 (via transformers)": {
-                "emoji": "6️⃣",
-                "model_name": "llama3-8b-8192",
-                "api_type": "library",
-                "library": "transformers"
+                "api": "ollama"
             }
         }
     },

@@ -94,20 +94,19 @@ class RequestQueue():
                 stream=False
             )
 
-            answer = response.choices[0].message.content
             response_message_ids = []
 
-            # Send the answer to Discord
+            # Send the response to Discord
             channel = self.bot.get_channel(conversation_log["channel_id"])
 
-            # Split the answer into multiple messages to handle discord message limits
-            chunks = [answer[i:i+1900] for i in range(0, len(answer), 1900)]
+            # Split the response into multiple messages to handle discord message limits
+            chunks = [response[i:i+1900] for i in range(0, len(response), 1900)]
             for chunk in chunks:
                 message = await channel.send(chunk)
                 response_message_ids.append(message.id)
 
-            # Save the answer and the response message IDs in the conversation log
-            conversation_log["messages"].append({"role": "assistant", "content": answer, "message_ids": response_message_ids})
+            # Save the response and the response message IDs in the conversation log
+            conversation_log["messages"].append({"role": "assistant", "content": response, "message_ids": response_message_ids})
             await message.add_reaction('🔄')
             await message.add_reaction('🗑️')
             self.save_conversation_log(conversation_id)

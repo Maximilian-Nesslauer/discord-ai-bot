@@ -30,7 +30,7 @@ async def handle_settings_command(bot, interaction, logger):
         await msg.delete()
 
     # Handle model selection
-    model_prompt = "Choose a model: " + ' ; '.join([f"{choice['emoji']} {choice['model_name']}" for choice in settings['model']['choices'].values()])
+    model_prompt = "Choose a model:\n\n" + '\n\n'.join([f"\u2002\u2002{choice['emoji']} {name}" for name, choice in settings['model']['choices'].items()]) + '\n\u200B'
     msg = await channel.send(model_prompt)
     model_emojis = [choice['emoji'] for choice in settings['model']['choices'].values()]
     for emoji in model_emojis:
