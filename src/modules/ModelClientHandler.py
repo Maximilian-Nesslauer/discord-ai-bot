@@ -1,5 +1,9 @@
 import os
+import psutil
 import requests
+import subprocess
+import time
+from loguru import logger
 from groq import Groq
 from settings import load_settings
 
@@ -9,7 +13,7 @@ class ModelClientManager():
     def __init__(self):
         self.clients = {}
         self.groq_client = GroqClient(api_key=os.getenv('GROQ_API_KEY'))
-        self.ollama_client = OllamaClient(api_url=os.getenv('OLLAMA_API_URL'))
+        self.ollama_client = OllamaClient(api_url=os.getenv('OLLAMA_API_URL'), app_path=os.getenv('OLLAMA_APP_PATH'))
 
     def get_client(self, model_settings):
         if model_settings['api_type'] == "external_and_library":
@@ -45,10 +49,13 @@ class GroqClient():
         return response.choices[0].message.content
 
 class OllamaClient():
-    def __init__(self, api_url):
+    def __init__(self, api_url, app_path):
         self.api_url = api_url
+        self.app_path = app_path
+        self.app_name = "ollama.exe"
 
     def chat_completions(self, messages, model, temperature, max_tokens, top_p, stream):
+        start_app(self.app_path, self.app_name)
         payload = {
             "model": model,
             "messages": messages,
@@ -66,3 +73,20 @@ class OllamaClient():
             return response['message']['content']
         else:
             raise Exception(f"API call failed with status code {response.status_code}: {response.text}")
+        
+
+def is_app_running(app_name):
+    for process in psutil.process_iter(['name']):
+        if process.info['name'] == app_name:
+            logger.info(f"Application '{app_name}' is currently running.")
+            return True
+    logger.info(f"Application '{app_name}' is not running.")
+    return False
+
+def start_app(app_path, app_name):
+    """Start an application if it is not already running"""
+    if not is_app_running(app_name):
+        logger.info(f"Starting application '{app_name}' from path '{app_path}'.")
+        subprocess.Popen(app_path, shell=True)
+        time.sleep(5)  # Wait for the application to fully initialize
+        logger.info(f"Application '{app_name}' should now be running.")
