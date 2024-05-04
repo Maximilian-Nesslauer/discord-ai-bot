@@ -1,11 +1,44 @@
 {
     "model": {
         "type": "choice",
-        "value": "llama3-70b-8192",
+        "value": "Llama3-70b-8192 (via Groq)",
         "choices": {
-            "Llama3-70b-8192": "1️⃣",
-            "llama3-8b-8192": "2️⃣",
-            "mixtral-8x7b-32768": "3️⃣"
+            "Llama3-70b-8192 (via Groq)": {
+                "emoji": "1️⃣",
+                "model_name": "Llama3-70b-8192",
+                "api_type": "external_and_library",
+                "api": "groq"
+            },
+            "llama3-8b-8192 (via Groq)": {
+                "emoji": "2️⃣",
+                "model_name": "llama3-8b-8192",
+                "api_type": "external_and_library",
+                "api": "groq"
+            },
+            "mixtral-8x7b-32768 (via Groq)": {
+                "emoji": "3️⃣",
+                "model_name": "mixtral-8x7b-32768",
+                "api_type": "external_and_library",
+                "api": "groq"
+            },
+            "llama3-8b-8192 (via Ollama)": {
+                "emoji": "4️⃣",
+                "model_name": "llama3-8b-8192",
+                "api_type": "local",
+                "api_url": "http://localhost:5000/api"
+            },
+            "mixtral-8x7b-32768 (via Ollama)": {
+                "emoji": "5️⃣",
+                "model_name": "mixtral-8x7b-32768",
+                "api_type": "local",
+                "api_url": "http://localhost:5000/api"
+            },
+            "llama3-8b-8192 (via transformers)": {
+                "emoji": "6️⃣",
+                "model_name": "llama3-8b-8192",
+                "api_type": "library",
+                "library": "transformers"
+            }
         }
     },
     "temperature": {

@@ -3,10 +3,11 @@ import os
 import json
 from loguru import logger
 from datetime import datetime
-from groq import Groq
 from utils import load_config
 from settings import load_settings
+from ModelClientHandler import ModelClientManager
 
+settings = load_settings("./src/settings/user_settings.json")
 log_folder = "./logs/conversations"
 
 class RequestQueue():
@@ -14,7 +15,7 @@ class RequestQueue():
         self.queue = asyncio.Queue()
         self.conversation_logs = {}
         self.bot = bot
-        self.llm_client = Groq(api_key=os.getenv('GROQ_API_KEY'))
+        self.model_client_manager = ModelClientManager()
         
     def load_conversation_logs(self):
         if os.path.exists(log_folder):
@@ -29,7 +30,6 @@ class RequestQueue():
 
     async def add_conversation(self, channel_id, user_id, message, role,message_id=None, create_empty=False):
         conversation_id = f"{channel_id}_{user_id}"
-        settings = load_settings("./src/settings/user_settings.json")  # Load settings
 
         if conversation_id not in self.conversation_logs:
             timestamp = datetime.now().isoformat()
@@ -84,9 +84,10 @@ class RequestQueue():
             messages = [{"role": msg["role"], "content": msg["content"]} for msg in conversation_log["messages"]]
 
             # Call the API
-            response = self.llm_client.chat.completions.create(
+            response = ModelClientManager.make_llm_call(
+                self.model_client_manager,
                 messages=messages,
-                model=conversation_log["model"],
+                model_settings=settings["model"]["choices"][conversation_log["model"]],
                 temperature=conversation_log["temperature"],
                 max_tokens=conversation_log["max_tokens"],
                 top_p=1,

@@ -30,8 +30,9 @@ async def handle_settings_command(bot, interaction, logger):
         await msg.delete()
 
     # Handle model selection
-    msg = await channel.send("Choose a value for {key}: " + ' ; '.join([f"{k} ({v})" for k, v in settings['model']['choices'].items()]))
-    model_emojis = settings['model']['choices'].values()
+    model_prompt = "Choose a model: " + ' ; '.join([f"{choice['emoji']} {choice['model_name']}" for choice in settings['model']['choices'].values()])
+    msg = await channel.send(model_prompt)
+    model_emojis = [choice['emoji'] for choice in settings['model']['choices'].values()]
     for emoji in model_emojis:
         await msg.add_reaction(emoji)
 
@@ -39,7 +40,8 @@ async def handle_settings_command(bot, interaction, logger):
         return user == interaction.user and str(reaction.emoji) in model_emojis
 
     reaction, _ = await interaction.client.wait_for('reaction_add', timeout=60.0, check=model_check)
-    settings['model']['value'] = [k for k, v in settings['model']['choices'].items() if v == str(reaction.emoji)][0]
+    selected_model_key = next(key for key, value in settings['model']['choices'].items() if value['emoji'] == str(reaction.emoji))
+    settings['model']['value'] = selected_model_key
     if config['delete_messages']:
         await msg.delete()
 
@@ -48,13 +50,14 @@ async def handle_settings_command(bot, interaction, logger):
     await handle_numeric_setting(interaction, channel, settings, 'temperature', 0.1, 1.0, "Please type a new numerical value for temperature between 0.1 and 1.0:")
 
     # Handle max_tokens setting
-    await handle_numeric_setting(interaction, channel, settings, 'max_tokens', 1, 4096, "Please type a new numerical value for max_tokens between 1 and 4096:")
+    await handle_numeric_setting(interaction, channel, settings, 'max_tokens', 1, 8192, "Please type a new numerical value for max_tokens between 1 and 8192:")
 
     # Handle system prompt setting
     prompt_msg = await channel.send("Please type a new system prompt. The default is 'You are a highly skilled and helpful AI assistant.'")
     msg = await interaction.client.wait_for('message', timeout=120.0, check=lambda m: m.author == interaction.user and m.channel == channel)
     settings['system_prompt']['value'] = msg.content
     if config['delete_messages']:
+        await prompt_msg.delete()
         await msg.delete()
     
     # Final confirmation for saving changes
