@@ -116,8 +116,8 @@ async def new_llm_conversation(interaction: discord.Interaction):
         new_channel = await guild.create_text_channel(channel_name, overwrites=overwrites)
         await interaction.response.defer()
 
-        msg = await interaction.followup.send("created new channel.")
-        await msg.delete(delay=5)
+        msg = await interaction.followup.send(f"Created new channel: <#{new_channel.id}>.")
+        await msg.delete(delay=10)
 
         # Send a message in the new channel
         await new_channel.send(f"Hey {user.mention}, lets start our conversation here.")
