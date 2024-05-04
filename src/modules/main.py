@@ -87,13 +87,13 @@ async def setup_llm(interaction: discord.Interaction):
     await msg.delete(delay=1)
 
     welcome_message = (
-        "Welcome to the LLM bot!\n\n"
-        "To start a new conversation with the bot, use the command `/newllmconversation`.\n\n"
-        "To talk to the bot, simply mention the bot or start your message with 'hey llm'.\n"
-        "The bot will respond to your messages and engage in a conversation with you.\n\n"
-        "Use the /settings command to change the settings of the conversation\n"
-        "Use the /clearllmconversation command to clear the conversation history of the current channel. Do this regularly to maintain the LLMs output quality.\n\n"
-        "Enjoy your conversation with the LLM bot!"
+        "**Welcome to the LLM Bot!** 🎉\n\n"
+        "Here's how you can interact with the bot:\n\n"
+        "- **Start a new conversation:** Use the command `/newllmconversation`.\n"
+        "- **Chat with the bot:** Mention the bot or start your message with 'hey llm'.\n"
+        "- **Adjust settings:** Use the `/settings` command to specify which model to use and to modify conversation parameters.\n"
+        "- **Clear history:** Use `/clearllmconversation` to delete the conversation history in this channel. Regular maintenance ensures optimal performance.\n\n"
+        "Enjoy your conversations with the LLM bot!"
     )
     await channel.send(welcome_message)
 
@@ -116,8 +116,8 @@ async def new_llm_conversation(interaction: discord.Interaction):
         new_channel = await guild.create_text_channel(channel_name, overwrites=overwrites)
         await interaction.response.defer()
 
-        msg = await interaction.followup.send("created new channel.")
-        await msg.delete(delay=5)
+        msg = await interaction.followup.send(f"Created new channel: <#{new_channel.id}>.")
+        await msg.delete(delay=10)
 
         # Send a message in the new channel
         await new_channel.send(f"Hey {user.mention}, lets start our conversation here.")

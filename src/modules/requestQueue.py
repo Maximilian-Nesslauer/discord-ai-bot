@@ -3,10 +3,11 @@ import os
 import json
 from loguru import logger
 from datetime import datetime
-from groq import Groq
 from utils import load_config
 from settings import load_settings
+from ModelClientHandler import ModelClientManager
 
+settings = load_settings("./src/settings/user_settings.json")
 log_folder = "./logs/conversations"
 
 class RequestQueue():
@@ -14,7 +15,7 @@ class RequestQueue():
         self.queue = asyncio.Queue()
         self.conversation_logs = {}
         self.bot = bot
-        self.llm_client = Groq(api_key=os.getenv('GROQ_API_KEY'))
+        self.model_client_manager = ModelClientManager()
         
     def load_conversation_logs(self):
         if os.path.exists(log_folder):
@@ -29,7 +30,6 @@ class RequestQueue():
 
     async def add_conversation(self, channel_id, user_id, message, role,message_id=None, create_empty=False):
         conversation_id = f"{channel_id}_{user_id}"
-        settings = load_settings("./src/settings/user_settings.json")  # Load settings
 
         if conversation_id not in self.conversation_logs:
             timestamp = datetime.now().isoformat()
@@ -84,29 +84,29 @@ class RequestQueue():
             messages = [{"role": msg["role"], "content": msg["content"]} for msg in conversation_log["messages"]]
 
             # Call the API
-            response = self.llm_client.chat.completions.create(
+            response = ModelClientManager.make_llm_call(
+                self.model_client_manager,
                 messages=messages,
-                model=conversation_log["model"],
+                model_settings=settings["model"]["choices"][conversation_log["model"]],
                 temperature=conversation_log["temperature"],
                 max_tokens=conversation_log["max_tokens"],
                 top_p=1,
                 stream=False
             )
 
-            answer = response.choices[0].message.content
             response_message_ids = []
 
-            # Send the answer to Discord
+            # Send the response to Discord
             channel = self.bot.get_channel(conversation_log["channel_id"])
 
-            # Split the answer into multiple messages to handle discord message limits
-            chunks = [answer[i:i+1900] for i in range(0, len(answer), 1900)]
+            # Split the response into multiple messages to handle discord message limits
+            chunks = [response[i:i+1900] for i in range(0, len(response), 1900)]
             for chunk in chunks:
                 message = await channel.send(chunk)
                 response_message_ids.append(message.id)
 
-            # Save the answer and the response message IDs in the conversation log
-            conversation_log["messages"].append({"role": "assistant", "content": answer, "message_ids": response_message_ids})
+            # Save the response and the response message IDs in the conversation log
+            conversation_log["messages"].append({"role": "assistant", "content": response, "message_ids": response_message_ids})
             await message.add_reaction('🔄')
             await message.add_reaction('🗑️')
             self.save_conversation_log(conversation_id)
