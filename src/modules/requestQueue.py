@@ -37,7 +37,8 @@ class RequestQueue():
                 "channel_id": channel_id,
                 "user_id": user_id,
                 "timestamp": timestamp,
-                "model": settings["model"]["value"],
+                "model_text": settings["model_text"]["value"],
+                "model_img": settings["model_img"]["value"],
                 "temperature": settings["temperature"]["value"],
                 "max_tokens": settings["max_tokens"]["value"],
                 "system_prompt": settings["system_prompt"]["value"],
@@ -87,7 +88,7 @@ class RequestQueue():
             response = ModelClientManager.make_llm_call(
                 self.model_client_manager,
                 messages=messages,
-                model_settings=settings["model"]["choices"][conversation_log["model"]],
+                model_settings=settings["model_text"]["choices"][conversation_log["model_text"]],
                 temperature=conversation_log["temperature"],
                 max_tokens=conversation_log["max_tokens"],
                 top_p=1,

@@ -29,10 +29,10 @@ async def handle_settings_command(bot, interaction, logger):
     if config['delete_messages']:
         await msg.delete()
 
-    # Handle model selection
-    model_prompt = "Choose a model:\n\n" + '\n\n'.join([f"\u2002\u2002{choice['emoji']} {name}" for name, choice in settings['model']['choices'].items()]) + '\n\u200B'
+    # Handle text model selection
+    model_prompt = "Choose a text model:\n\n" + '\n\n'.join([f"\u2002\u2002{choice['emoji']} {name}" for name, choice in settings['model_text']['choices'].items()]) + '\n\u200B'
     msg = await channel.send(model_prompt)
-    model_emojis = [choice['emoji'] for choice in settings['model']['choices'].values()]
+    model_emojis = [choice['emoji'] for choice in settings['model_text']['choices'].values()]
     for emoji in model_emojis:
         await msg.add_reaction(emoji)
 
@@ -40,8 +40,24 @@ async def handle_settings_command(bot, interaction, logger):
         return user == interaction.user and str(reaction.emoji) in model_emojis
 
     reaction, _ = await interaction.client.wait_for('reaction_add', timeout=60.0, check=model_check)
-    selected_model_key = next(key for key, value in settings['model']['choices'].items() if value['emoji'] == str(reaction.emoji))
-    settings['model']['value'] = selected_model_key
+    selected_model_key = next(key for key, value in settings['model_text']['choices'].items() if value['emoji'] == str(reaction.emoji))
+    settings['model_text']['value'] = selected_model_key
+    if config['delete_messages']:
+        await msg.delete()
+
+    # Handle image model selection
+    model_prompt = "Choose an image model:\n\n" + '\n\n'.join([f"\u2002\u2002{choice['emoji']} {name}" for name, choice in settings['model_img']['choices'].items()]) + '\n\u200B'
+    msg = await channel.send(model_prompt)
+    model_emojis = [choice['emoji'] for choice in settings['model_img']['choices'].values()]
+    for emoji in model_emojis:
+        await msg.add_reaction(emoji)
+
+    def model_check(reaction, user):
+        return user == interaction.user and str(reaction.emoji) in model_emojis
+
+    reaction, _ = await interaction.client.wait_for('reaction_add', timeout=60.0, check=model_check)
+    selected_model_key = next(key for key, value in settings['model_img']['choices'].items() if value['emoji'] == str(reaction.emoji))
+    settings['model_img']['value'] = selected_model_key
     if config['delete_messages']:
         await msg.delete()
 
@@ -135,7 +151,8 @@ def update_conversation_log_with_settings(bot, channel_id, user_id, settings):
     # Update the conversation log in memory
     if conversation_id in bot.queue.conversation_logs:
         conversation_log = bot.queue.conversation_logs[conversation_id]
-        conversation_log['model'] = settings['model']['value']
+        conversation_log['model_text'] = settings['model_text']['value']
+        conversation_log['model_img'] = settings['model_img']['value']
         conversation_log['temperature'] = settings['temperature']['value']
         conversation_log['max_tokens'] = settings['max_tokens']['value']
         conversation_log['system_prompt'] = settings['system_prompt']['value']
@@ -145,7 +162,8 @@ def update_conversation_log_with_settings(bot, channel_id, user_id, settings):
     if os.path.exists(log_file):
         with open(log_file, "r+") as f:
             conversation_log = json.load(f)
-            conversation_log['model'] = settings['model']['value']
+            conversation_log['model_text'] = settings['model_text']['value']
+            conversation_log['model_img'] = settings['model_img']['value']
             conversation_log['temperature'] = settings['temperature']['value']
             conversation_log['max_tokens'] = settings['max_tokens']['value']
             conversation_log['system_prompt'] = settings['system_prompt']['value']
