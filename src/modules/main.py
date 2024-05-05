@@ -8,12 +8,13 @@ from discord import app_commands
 from loguru import logger
 from dotenv import load_dotenv
 from settings import handle_settings_command
-from utils import load_config
+from utils import load_config, start_app
 from requestQueue import RequestQueue
 
 load_dotenv()
 bot_token = os.getenv('DISCORD_BOT_TOKEN')
 config = load_config("config.json")
+ollama_app_path=os.getenv('OLLAMA_APP_PATH')
 
 logger.add("./logs/bot_logs.log", rotation="50 MB")
 
@@ -24,6 +25,11 @@ class DiscordBot(discord.Client):
         super().__init__(intents=intents)
         self.slash_command_tree = app_commands.CommandTree(self)
         self.queue = RequestQueue(self)
+
+        try:
+            start_app(ollama_app_path, "ollama.exe")
+        except Exception as e:
+            logger.error(f"Failed to start app on DiscordBot __init__: {e}")
 
     async def on_message(self, message: discord.Message):
         if message.author == self.user:

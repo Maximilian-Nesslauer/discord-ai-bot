@@ -1,11 +1,9 @@
 import os
-import psutil
 import requests
-import subprocess
-import time
 from loguru import logger
 from groq import Groq
 from settings import load_settings
+from utils import start_app
 
 settings = load_settings("./src/settings/user_settings.json")
 
@@ -73,20 +71,4 @@ class OllamaClient():
             return response['message']['content']
         else:
             raise Exception(f"API call failed with status code {response.status_code}: {response.text}")
-        
-
-def is_app_running(app_name):
-    for process in psutil.process_iter(['name']):
-        if process.info['name'] == app_name:
-            logger.info(f"Application '{app_name}' is currently running.")
-            return True
-    logger.info(f"Application '{app_name}' is not running.")
-    return False
-
-def start_app(app_path, app_name):
-    """Start an application if it is not already running"""
-    if not is_app_running(app_name):
-        logger.info(f"Starting application '{app_name}' from path '{app_path}'.")
-        subprocess.Popen(app_path, shell=True)
-        time.sleep(5)  # Wait for the application to fully initialize
-        logger.info(f"Application '{app_name}' should now be running.")
+    
