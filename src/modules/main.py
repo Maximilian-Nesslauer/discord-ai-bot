@@ -7,7 +7,7 @@ from discord.ext import commands
 from discord import app_commands
 from loguru import logger
 from dotenv import load_dotenv
-from settings import handle_settings_command
+from settings import handle_settings_command, handle_characters_command
 from utils import load_config, start_app
 from requestQueue import RequestQueue
 
@@ -99,6 +99,7 @@ async def setup_llm(interaction: discord.Interaction):
         "- **Start a new conversation:** Use the command `/newllmconversation`.\n"
         "- **Chat with the bot:** Mention the bot or start your message with 'hey llm'. There is no neeed for the 'hey llm' trigger if you are in your private llm channel.\n"
         "- **Adjust settings:** Use the `/settings` command to specify which model to use and to modify conversation parameters.\n"
+        "- **Assign the bot different Characters:** Use the `/characters` command to specify which characters to use.\n"
         "- **Clear history:** Use `/clearllmconversation` to delete the conversation history in this channel. Regular maintenance ensures optimal performance.\n\n"
         "Enjoy your conversations with the LLM bot!"
     )
@@ -168,6 +169,28 @@ async def settings(interaction: discord.Interaction):
 
     except:
         logger.error(f"Error in settings command: {e}")
+        bot.users_in_settings.remove(interaction.user.id)
+
+
+@bot.slash_command_tree.command(name='characters', description='Manage bot character')
+async def characters(interaction: discord.Interaction):
+    bot.users_in_settings.add(interaction.user.id)
+    
+    try:
+        # Ensure there's an ongoing conversation in the channel
+        conversation_id = f"{interaction.channel_id}_{interaction.user.id}"
+        if conversation_id not in bot.queue.conversation_logs:
+            await interaction.response.send_message("No active conversation found in this channel.", ephemeral=True, delete_after=10)
+            bot.users_in_settings.remove(interaction.user.id)
+            return
+        
+        logger.info(f"Characters command called by {interaction.user}")
+        await interaction.response.defer()
+        await handle_characters_command(bot, interaction, logger)
+        bot.users_in_settings.remove(interaction.user.id)
+
+    except:
+        logger.error(f"Error in characters command: {e}")
         bot.users_in_settings.remove(interaction.user.id)
 
 async def quit_exit():

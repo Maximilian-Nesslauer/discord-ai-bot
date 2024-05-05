@@ -39,10 +39,11 @@ class RequestQueue():
                 "timestamp": timestamp,
                 "model_text": settings["model_text"]["value"],
                 "model_img": settings["model_img"]["value"],
+                "character": "Assistant",
                 "temperature": settings["temperature"]["value"],
                 "max_tokens": settings["max_tokens"]["value"],
-                "system_prompt": settings["system_prompt"]["value"],
-                "messages": [{"role": "system", "content": settings["system_prompt"]["value"]}]
+                "assistant_system_prompt": settings['characters']['Assistant']['system_prompt'],
+                "messages": [{"role": "system", "content": settings['characters']['Assistant']['system_prompt'], "type": "character_msg"}]
             }
 
         if not create_empty:

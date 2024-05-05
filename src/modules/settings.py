@@ -71,7 +71,7 @@ async def handle_settings_command(bot, interaction, logger):
     # Handle system prompt setting
     prompt_msg = await channel.send("Please type a new system prompt. The default is 'You are a highly skilled and helpful AI assistant.'")
     msg = await interaction.client.wait_for('message', timeout=120.0, check=lambda m: m.author == interaction.user and m.channel == channel)
-    settings['system_prompt']['value'] = msg.content
+    settings['characters']['Assistant']['system_prompt'] = msg.content
     if config['delete_messages']:
         await prompt_msg.delete()
         await msg.delete()
@@ -94,6 +94,35 @@ async def handle_settings_command(bot, interaction, logger):
         save_msg = await channel.send("Changes not saved.")
         if config['delete_messages']:
             await save_msg.delete(delay=5)
+
+    settings_update_complete_msg = await interaction.followup.send("Settings update complete.")
+    await settings_update_complete_msg.delete(delay=5)
+
+
+async def handle_characters_command(bot, interaction, logger):
+    config = load_config("config.json")
+    settings = load_settings("./src/settings/user_settings.json")
+
+    channel = interaction.channel
+
+    def check(reaction, user):
+        return user == interaction.user and str(reaction.emoji) in ['✅', '❌']
+
+    # Handle text model selection
+    character_prompt = "Choose a character:\n\n" + '\n\n'.join([f"\u2002\u2002{choice['emoji']} {name} - {choice['description']}" for name, choice in settings['characters'].items()]) + '\n\u200B'
+    msg = await channel.send(character_prompt)
+    character_emojis = [choice['emoji'] for choice in settings['characters'].values()]
+    for emoji in character_emojis:
+        await msg.add_reaction(emoji)
+
+    def character_check(reaction, user):
+        return user == interaction.user and str(reaction.emoji) in character_emojis
+
+    reaction, _ = await interaction.client.wait_for('reaction_add', timeout=60.0, check=character_check)
+    selected_character_key = next(key for key, value in settings['characters'].items() if value['emoji'] == str(reaction.emoji))
+    settings['character_value'] = selected_character_key
+    if config['delete_messages']:
+        await msg.delete()
 
     settings_update_complete_msg = await interaction.followup.send("Settings update complete.")
     await settings_update_complete_msg.delete(delay=5)
@@ -155,7 +184,8 @@ def update_conversation_log_with_settings(bot, channel_id, user_id, settings):
         conversation_log['model_img'] = settings['model_img']['value']
         conversation_log['temperature'] = settings['temperature']['value']
         conversation_log['max_tokens'] = settings['max_tokens']['value']
-        conversation_log['system_prompt'] = settings['system_prompt']['value']
+        conversation_log['character'] = settings['character_value']
+        conversation_log['assistant_system_prompt'] = settings['characters']['Assistant']['system_prompt']
         bot.queue.save_conversation_log(conversation_id)
 
     # Update the conversation log in the file system
@@ -166,8 +196,10 @@ def update_conversation_log_with_settings(bot, channel_id, user_id, settings):
             conversation_log['model_img'] = settings['model_img']['value']
             conversation_log['temperature'] = settings['temperature']['value']
             conversation_log['max_tokens'] = settings['max_tokens']['value']
-            conversation_log['system_prompt'] = settings['system_prompt']['value']
-            conversation_log['messages'][0]['content'] = settings['system_prompt']['value']
+            conversation_log['character'] = settings['character_value']
+            conversation_log['assistant_system_prompt'] = settings['characters']['Assistant']['system_prompt']
+            if conversation_log['character'] == 'Assistant':
+                conversation_log['messages'][0]['content'] = settings['characters']['Assistant']['system_prompt']
             f.seek(0)
             json.dump(conversation_log, f, indent=4)
             f.truncate()
