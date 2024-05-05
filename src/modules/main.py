@@ -25,6 +25,7 @@ class DiscordBot(discord.Client):
         super().__init__(intents=intents)
         self.slash_command_tree = app_commands.CommandTree(self)
         self.queue = RequestQueue(self)
+        self.users_in_settings = set()
 
         try:
             start_app(ollama_app_path, "ollama.exe")
@@ -32,8 +33,8 @@ class DiscordBot(discord.Client):
             logger.error(f"Failed to start app on DiscordBot __init__: {e}")
 
     async def on_message(self, message: discord.Message):
-        if message.author == self.user:
-            return  # Ignore messages sent by the bot itself
+        if message.author == self.user or message.author.id in self.users_in_settings:
+            return  # Ignore messages from the bot itself or while user is in settings
 
         bot_mention = f'<@{self.user.id}>'
         if message.channel.name == f'llm-{message.author.name}' or message.content.lower().startswith('hey llm') or bot_mention in message.content.lower() or message.reference and message.reference.resolved.author == self.user:
@@ -150,16 +151,24 @@ async def clear_conversation(interaction: discord.Interaction):
 
 @bot.slash_command_tree.command(name='settings', description='Manage bot settings')
 async def settings(interaction: discord.Interaction):
-    # Ensure there's an ongoing conversation in the channel
-    conversation_id = f"{interaction.channel_id}_{interaction.user.id}"
-    if conversation_id not in bot.queue.conversation_logs:
-        await interaction.response.send_message("No active conversation found in this channel.", ephemeral=True, delete_after=10)
-        return
+    bot.users_in_settings.add(interaction.user.id)
     
-    logger.info(f"Settings command called by {interaction.user}")
-    await interaction.response.defer()
-    await handle_settings_command(bot, interaction, logger)
+    try:
+        # Ensure there's an ongoing conversation in the channel
+        conversation_id = f"{interaction.channel_id}_{interaction.user.id}"
+        if conversation_id not in bot.queue.conversation_logs:
+            await interaction.response.send_message("No active conversation found in this channel.", ephemeral=True, delete_after=10)
+            bot.users_in_settings.remove(interaction.user.id)
+            return
+        
+        logger.info(f"Settings command called by {interaction.user}")
+        await interaction.response.defer()
+        await handle_settings_command(bot, interaction, logger)
+        bot.users_in_settings.remove(interaction.user.id)
 
+    except:
+        logger.error(f"Error in settings command: {e}")
+        bot.users_in_settings.remove(interaction.user.id)
 
 async def quit_exit():
     '''Gracefully shuts down the bot and logs the shutdown'''
