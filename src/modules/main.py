@@ -36,7 +36,7 @@ class DiscordBot(discord.Client):
             return  # Ignore messages sent by the bot itself
 
         bot_mention = f'<@{self.user.id}>'
-        if message.content.lower().startswith('hey llm') or bot_mention in message.content.lower() or message.reference and message.reference.resolved.author == self.user:
+        if message.channel.name == f'llm-{message.author.name}' or message.content.lower().startswith('hey llm') or bot_mention in message.content.lower() or message.reference and message.reference.resolved.author == self.user:
             content = message.content
             if content.lower().startswith('hey llm'):
                 content = content[8:]  # Remove "hey llm " from the start of the message
@@ -96,7 +96,7 @@ async def setup_llm(interaction: discord.Interaction):
         "**Welcome to the LLM Bot!** 🎉\n\n"
         "Here's how you can interact with the bot:\n\n"
         "- **Start a new conversation:** Use the command `/newllmconversation`.\n"
-        "- **Chat with the bot:** Mention the bot or start your message with 'hey llm'.\n"
+        "- **Chat with the bot:** Mention the bot or start your message with 'hey llm'. There is no neeed for the 'hey llm' trigger if you are in your private llm channel.\n"
         "- **Adjust settings:** Use the `/settings` command to specify which model to use and to modify conversation parameters.\n"
         "- **Clear history:** Use `/clearllmconversation` to delete the conversation history in this channel. Regular maintenance ensures optimal performance.\n\n"
         "Enjoy your conversations with the LLM bot!"
