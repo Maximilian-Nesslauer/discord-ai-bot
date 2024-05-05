@@ -1,5 +1,6 @@
 import os
 import requests
+import time
 from loguru import logger
 from groq import Groq
 from settings import load_settings
@@ -65,10 +66,24 @@ class OllamaClient():
             },
             "keep_alive": '10m'
         }
-        response = requests.post(self.api_url, json=payload)
+        response = requests.post(self.api_url + "/chat", json=payload)
         if response.status_code == 200:
-            response = response.json()
-            return response['message']['content']
+            return response.json()['message']['content']
+        elif response.status_code == 404:
+            self.pull_model(model)
+            time.sleep(10)
+            return self.chat_completions(messages, model, temperature, max_tokens, top_p, stream)
         else:
             raise Exception(f"API call failed with status code {response.status_code}: {response.text}")
+
+    def pull_model(self, model_name):
+        """Pulls a model from the Ollama library"""
+        logger.info(f"Pulling model '{model_name}' from Ollama library.")
+        pull_response = requests.post(self.api_url + "/pull", json={"name": model_name})
+        if pull_response.status_code == 200:
+            logger.info(f"Model '{model_name}' pulled successfully.")
+        else:
+            logger.error(f"Failed to pull model '{model_name}': {pull_response.text}")
+
+
     
