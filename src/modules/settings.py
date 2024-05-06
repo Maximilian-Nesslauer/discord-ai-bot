@@ -120,9 +120,10 @@ async def handle_characters_command(bot, interaction, logger):
 
     reaction, _ = await interaction.client.wait_for('reaction_add', timeout=60.0, check=character_check)
     selected_character_key = next(key for key, value in settings['characters'].items() if value['emoji'] == str(reaction.emoji))
-    settings['character_value'] = selected_character_key
     if config['delete_messages']:
         await msg.delete()
+
+    await update_conversation_with_character(bot, interaction.channel_id, interaction.user.id, selected_character_key, settings['characters'][selected_character_key], logger)
 
     settings_update_complete_msg = await interaction.followup.send("Settings update complete.")
     await settings_update_complete_msg.delete(delay=5)
@@ -160,19 +161,6 @@ async def handle_numeric_setting(interaction, admin_channel, settings, key, min_
                 await message.delete()
                 await invalid_input_msg.delete(delay=10)
 
-
-def load_settings(filename):
-    try:
-        with open(filename, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {}  # Return an empty dict if the file does not exist
-
-def save_settings_to_file(settings, filename):
-    with open(filename, 'w', encoding='utf-8') as f:
-        json.dump(settings, f, indent=4)
-
-
 def update_conversation_log_with_settings(bot, channel_id, user_id, settings):
     conversation_id = f"{channel_id}_{user_id}"
     log_file = f"./logs/conversations/{conversation_id}.json"
@@ -185,7 +173,8 @@ def update_conversation_log_with_settings(bot, channel_id, user_id, settings):
         conversation_log['temperature'] = settings['temperature']['value']
         conversation_log['max_tokens'] = settings['max_tokens']['value']
         conversation_log['character'] = settings['character_value']
-        conversation_log['assistant_system_prompt'] = settings['characters']['Assistant']['system_prompt']
+        if conversation_log['character'] == 'Assistant':
+            conversation_log['assistant_system_prompt'] = settings['characters']['Assistant']['system_prompt']
         bot.queue.save_conversation_log(conversation_id)
 
     # Update the conversation log in the file system
@@ -197,9 +186,47 @@ def update_conversation_log_with_settings(bot, channel_id, user_id, settings):
             conversation_log['temperature'] = settings['temperature']['value']
             conversation_log['max_tokens'] = settings['max_tokens']['value']
             conversation_log['character'] = settings['character_value']
-            conversation_log['assistant_system_prompt'] = settings['characters']['Assistant']['system_prompt']
             if conversation_log['character'] == 'Assistant':
+                conversation_log['assistant_system_prompt'] = settings['characters']['Assistant']['system_prompt']
                 conversation_log['messages'][0]['content'] = settings['characters']['Assistant']['system_prompt']
             f.seek(0)
             json.dump(conversation_log, f, indent=4)
             f.truncate()
+
+async def update_conversation_with_character(bot, channel_id, user_id, character_key, character, logger):
+    conversation_id = f"{channel_id}_{user_id}"
+    if conversation_id not in bot.queue.conversation_logs:
+        logger.error(f"No conversation log found for {conversation_id}")
+        return
+
+    conversation_log = bot.queue.conversation_logs[conversation_id]
+
+    conversation_log['character'] = character_key
+    
+    non_character_msgs = [msg for msg in conversation_log['messages'] if msg.get('type') != 'character_msg']
+    
+    new_character_msgs = [{
+        "role": "system",
+        "content": character['system_prompt'],
+        "type": "character_msg"
+    }]
+    
+    character_messages = character.get('messages', [])
+    for msg in character_messages:
+        msg['type'] = 'character_msg'
+        new_character_msgs.append(msg)
+    conversation_log['messages'] = new_character_msgs + non_character_msgs
+    bot.queue.save_conversation_log(conversation_id)
+
+
+
+def load_settings(filename):
+    try:
+        with open(filename, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+
+def save_settings_to_file(settings, filename):
+    with open(filename, 'w', encoding='utf-8') as f:
+        json.dump(settings, f, indent=4)
