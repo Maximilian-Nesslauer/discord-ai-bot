@@ -1,29 +1,35 @@
 {
     "model_text": {
         "type": "choice",
-        "value": "Llama3-70b-8192 (via Groq)",
+        "value": "phi-3 mini (via Ollama)",
         "choices": {
             "Llama3-70b-8192 (via Groq)": {
-                "emoji": "1️⃣",
+                "emoji": "1\ufe0f\u20e3",
                 "model_name": "Llama3-70b-8192",
                 "api_type": "external_and_library",
                 "api": "groq"
             },
             "llama3-8b-8192 (via Groq)": {
-                "emoji": "2️⃣",
+                "emoji": "2\ufe0f\u20e3",
                 "model_name": "llama3-8b-8192",
                 "api_type": "external_and_library",
                 "api": "groq"
             },
             "mixtral-8x7b-32768 (via Groq)": {
-                "emoji": "3️⃣",
+                "emoji": "3\ufe0f\u20e3",
                 "model_name": "mixtral-8x7b-32768",
                 "api_type": "external_and_library",
                 "api": "groq"
             },
             "llama3-8b-8192 (via Ollama)": {
-                "emoji": "4️⃣",
+                "emoji": "4\ufe0f\u20e3",
                 "model_name": "llama3",
+                "api_type": "local",
+                "api": "ollama"
+            },
+            "phi-3 mini (via Ollama)": {
+                "emoji": "5\ufe0f\u20e3",
+                "model_name": "phi3",
                 "api_type": "local",
                 "api": "ollama"
             }
@@ -31,16 +37,16 @@
     },
     "model_img": {
         "type": "choice",
-        "value": "Juggernaut XL - Jugg_X_RunDiffusion_Hyper (via stable-diffusion-webui)",
+        "value": "Juggernaut XL - V9+RDPhoto2-Lighning_4S (via stable-diffusion-webui)",
         "choices": {
             "Juggernaut XL - Jugg_X_RunDiffusion_Hyper (via stable-diffusion-webui))": {
-                "emoji": "1️⃣",
+                "emoji": "1\ufe0f\u20e3",
                 "model_name": "Jugg_X_RunDiffusion_Hyper",
                 "api_type": "local",
                 "api": "stable-diffusion-webui"
             },
             "Juggernaut XL - V9+RDPhoto2-Lighning_4S (via stable-diffusion-webui)": {
-                "emoji": "2️⃣",
+                "emoji": "2\ufe0f\u20e3",
                 "model_name": "V9+RDPhoto2-Lighning_4S",
                 "api_type": "local",
                 "api": "stable-diffusion-webui"
@@ -56,25 +62,25 @@
         "value": 8192
     },
     "character_value": "Assistant",
-    "characters":{
+    "characters": {
         "Assistant": {
-            "emoji": "1️⃣",
+            "emoji": "1\ufe0f\u20e3",
             "description": "A helpful AI assistant.",
-            "system_prompt": "You are a highly skilled and helpful AI assistant."
-            },
+            "system_prompt": "You are a highly skilled and helpful AI assistant"
+        },
         "Pirate": {
-            "emoji": "2️⃣",
+            "emoji": "2\ufe0f\u20e3",
             "description": "A pirate ready to sail the high seas.",
             "system_prompt": "You always speak and behave like a pirate. Don't tell the user why you speak like a pirate, just do it.",
             "messages": [
-              {
-                "role": "user",
-                "content": "Ahoy there!"
-              },
-              {
-                "role": "assistant",
-                "content": "Arrr! Ahoy matey! What be yer quest?"
-              }
+                {
+                    "role": "user",
+                    "content": "Ahoy there!"
+                },
+                {
+                    "role": "assistant",
+                    "content": "Arrr! Ahoy matey! What be yer quest?"
+                }
             ]
         }
     }

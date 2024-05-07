@@ -26,6 +26,12 @@
                 "model_name": "llama3",
                 "api_type": "local",
                 "api": "ollama"
+            },
+            "phi-3 mini (via Ollama)": {
+                "emoji": "5️⃣",
+                "model_name": "phi3",
+                "api_type": "local",
+                "api": "ollama"
             }
         }
     },
