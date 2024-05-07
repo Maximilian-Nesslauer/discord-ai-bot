@@ -134,7 +134,7 @@ async def new_llm_conversation(interaction: discord.Interaction):
         await interaction.response.send_message(f"Conversation channel already exists for {user.mention}.", ephemeral=True, delete_after=5)
 
 
-@bot.slash_command_tree.command(name='clearllmconversation', description='Clear the conversation log of the current channel')
+@bot.slash_command_tree.command(name='deletellmconversation', description='Delete and Clear the conversation log of the current channel')
 async def clear_conversation(interaction: discord.Interaction):
     channel_id = interaction.channel_id
     user_id = interaction.user.id
@@ -147,6 +147,17 @@ async def clear_conversation(interaction: discord.Interaction):
     user_name = interaction.user.name
     if user_name.lower() in channel.name.lower():
         await channel.delete()
+    logger.info(f"Delete and Clear conversation attempt by user {user_id} in channel {channel_id}: {message}")
+
+@bot.slash_command_tree.command(name='clearllmconversation', description='Clear the conversation log of the current channel')
+async def clear_conversation(interaction: discord.Interaction):
+    channel_id = interaction.channel_id
+    user_id = interaction.user.id
+    conversation_id = f"{channel_id}_{user_id}"
+    
+    message = bot.queue.clear_conversation_log(conversation_id, user_id)
+    await interaction.response.send_message(message)
+
     logger.info(f"Clear conversation attempt by user {user_id} in channel {channel_id}: {message}")
 
 
