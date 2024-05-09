@@ -1,3 +1,4 @@
 {
-    "delete_messages": true
+    "delete_messages": true,
+    "max_vram_model_usage_GB": 11
 }
