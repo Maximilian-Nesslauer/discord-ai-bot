@@ -1,6 +1,7 @@
 import os
 import requests
 import time
+from llama_cpp import Llama
 from loguru import logger
 from groq import Groq
 from settings import load_settings
@@ -37,6 +38,13 @@ class ModelClientManager():
                         return self.ollama_client
                     else:
                         raise MemoryError(f"Insufficient VRAM to load {model_settings['model_name']}")
+                    
+            elif model_settings['api'] == "llama_cpp":
+                llama_cpp_client = LlamaCppClient(
+                    model_path=model_settings['model_path'],
+                    chat_format=model_settings['chat_format']
+                )
+                return llama_cpp_client
             
         else:
             raise ValueError(f"Unsupported API type {model_settings['api_type']}")
@@ -149,7 +157,19 @@ class OllamaClient():
         }
 
         response = requests.post(self.api_url + "/chat", json=payload)
+        time.sleep(5)
 
 
+class LlamaCppClient():
+    def __init__(self, model_path, chat_format):
+        self.client = Llama(model_path=model_path, chat_format=chat_format)
 
-    
+    def chat_completions(self, messages, model, temperature, max_tokens, top_p, stream):
+        response = self.client.create_chat_completion(
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            stream=stream
+        )
+        return response['choices'][0]['message']['content']

@@ -1,7 +1,7 @@
 {
     "model_text": {
         "type": "choice",
-        "value": "Llama3-70b-8192 (via Groq)",
+        "value": "llama3-8b-8192 Q5_K_M (via llama cpp)",
         "choices": {
             "Llama3-70b-8192 (via Groq)": {
                 "emoji": "1️⃣",
@@ -33,6 +33,15 @@
                 "model_name": "phi3",
                 "api_type": "local",
                 "api": "ollama",
+                "vram_usage_gb": 8.2
+            },
+            "llama3-8b-8192 Q5_K_M (via llama cpp)": {
+                "emoji": "6️⃣",
+                "model_name": "llama3",
+                "api_type": "local",
+                "api": "llama_cpp",
+                "chat_format": "llama-3",
+                "model_path": "./public/models/llm/meta-llama-3-8b-instruct.Q5_K_M.gguf",
                 "vram_usage_gb": 8.2
             }
         }

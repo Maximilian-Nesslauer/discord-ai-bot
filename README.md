@@ -35,6 +35,6 @@ Future Enhancements will include local model hosting and integrating image gener
 
 .\.venv\Scripts\activate
 
-pip install -r -\requirements.txt
+pip install -r requirements.txt
 
 pip freeze > .\requirements.txt
