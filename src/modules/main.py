@@ -1,7 +1,6 @@
 import os
 import sys
 import asyncio
-
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -11,11 +10,13 @@ from settings import handle_settings_command, handle_characters_command
 from utils import load_config, start_app
 from requestQueue import RequestQueue
 
+# Load environment variables
 load_dotenv()
 bot_token = os.getenv('DISCORD_BOT_TOKEN')
 config = load_config("config.json")
-ollama_app_path=os.getenv('OLLAMA_APP_PATH')
+ollama_app_path = os.getenv('OLLAMA_APP_PATH')
 
+# Set up logging
 logger.add("./logs/bot_logs.log", rotation="50 MB")
 
 class DiscordBot(discord.Client):
@@ -37,13 +38,16 @@ class DiscordBot(discord.Client):
             return  # Ignore messages from the bot itself or while user is in settings
 
         bot_mention = f'<@{self.user.id}>'
-        if message.channel.name == f'llm-{message.author.name}' or message.content.lower().startswith('hey llm') or bot_mention in message.content.lower() or message.reference and message.reference.resolved.author == self.user:
+        if (message.channel.name == f'llm-{message.author.name}' or
+                message.content.lower().startswith('hey llm') or
+                bot_mention in message.content.lower() or
+                (message.reference and message.reference.resolved and message.reference.resolved.author == self.user)):
             content = message.content
             if content.lower().startswith('hey llm'):
                 content = content[8:]  # Remove "hey llm " from the start of the message
             elif bot_mention in content.lower():
                 content = content.replace(bot_mention, '', 1)  # Remove the bot's mention from the message
-            await self.queue.add_conversation(message.channel.id, message.author.id, content, 'user',message.id, create_empty=False)
+            await self.queue.add_conversation(message.channel.id, message.author.id, content, 'user', message.id, create_empty=False)
             logger.info(f"Added message to queue: {content}")
 
     async def on_ready(self):
@@ -90,14 +94,14 @@ async def setup_llm(interaction: discord.Interaction):
 
     await interaction.response.defer()
 
-    msg = await interaction.followup.send("sending welcome message.")
+    msg = await interaction.followup.send("Sending welcome message.")
     await msg.delete(delay=1)
 
     welcome_message = (
         "**Welcome to the LLM Bot!** 🎉\n\n"
         "Here's how you can interact with the bot:\n\n"
         "- **Start a new conversation:** Use the command `/newllmconversation`.\n"
-        "- **Chat with the bot:** Mention the bot or start your message with 'hey llm'. There is no neeed for the 'hey llm' trigger if you are in your private llm channel.\n"
+        "- **Chat with the bot:** Mention the bot or start your message with 'hey llm'. There is no need for the 'hey llm' trigger if you are in your private llm channel.\n"
         "- **Adjust settings:** Use the `/settings` command to specify which model to use and to modify conversation parameters.\n"
         "- **Assign the bot different Characters:** Use the `/characters` command to specify which characters to use.\n"
         "- **Clear history:** Use `/clearllmconversation` to delete the conversation history in this channel. Regular maintenance ensures optimal performance.\n\n"
@@ -128,7 +132,7 @@ async def new_llm_conversation(interaction: discord.Interaction):
         await msg.delete(delay=10)
 
         # Send a message in the new channel
-        await new_channel.send(f"Hey {user.mention}, lets start our conversation here.")
+        await new_channel.send(f"Hey {user.mention}, let's start our conversation here.")
         await bot.queue.add_conversation(new_channel.id, user.id, "null", 'user', create_empty=True)
     else:
         await interaction.response.send_message(f"Conversation channel already exists for {user.mention}.", ephemeral=True, delete_after=5)
@@ -178,7 +182,7 @@ async def settings(interaction: discord.Interaction):
         await handle_settings_command(bot, interaction, logger)
         bot.users_in_settings.remove(interaction.user.id)
 
-    except:
+    except Exception as e:
         logger.error(f"Error in settings command: {e}")
         bot.users_in_settings.remove(interaction.user.id)
 
@@ -200,7 +204,7 @@ async def characters(interaction: discord.Interaction):
         await handle_characters_command(bot, interaction, logger)
         bot.users_in_settings.remove(interaction.user.id)
 
-    except:
+    except Exception as e:
         logger.error(f"Error in characters command: {e}")
         bot.users_in_settings.remove(interaction.user.id)
 

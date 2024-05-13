@@ -16,6 +16,9 @@ class RequestQueue():
         self.conversation_logs = {}
         self.bot = bot
         self.model_client_manager = ModelClientManager()
+
+        self.config = load_config('./config.json')
+        self.image_gen_trigger_words = self.config.get('image_gen_trigger_words', [])
         
     def load_conversation_logs(self):
         if os.path.exists(log_folder):
@@ -27,9 +30,13 @@ class RequestQueue():
                         self.conversation_logs[conversation_id] = json.load(file)
                         logger.info(f"Loaded conversation log for {conversation_id}")
 
-
-    async def add_conversation(self, channel_id, user_id, message, role,message_id=None, create_empty=False):
+    async def add_conversation(self, channel_id, user_id, message, role, message_id=None, create_empty=False):
         conversation_id = f"{channel_id}_{user_id}"
+
+        if any(word in message.lower() for word in self.image_gen_trigger_words):
+            # Request verification if image generation is intended
+            # TODO: Implement image generation verification
+            pass
 
         if conversation_id not in self.conversation_logs:
             timestamp = datetime.now().isoformat()
@@ -50,7 +57,7 @@ class RequestQueue():
             conversation_log = self.conversation_logs[conversation_id]
             channel = self.bot.get_channel(conversation_log["channel_id"])
 
-            # delete the reactions from the last message
+            # Delete the reactions from the last message
             try:
                 last_msg_id = conversation_log['messages'][-1]['message_ids'][-1]
                 if last_msg_id:
@@ -63,7 +70,6 @@ class RequestQueue():
             except Exception as e:
                 logger.error(f"Failed to fetch or edit message for reaction removal: {e}")
 
-
             message_entry = {"role": role, "content": message, "message_ids": []}
             if role == 'user':
                 message_entry["message_ids"] = [message_id]
@@ -72,7 +78,6 @@ class RequestQueue():
             await self.queue.put((conversation_id, message))
         else:
             self.save_conversation_log(conversation_id)
-            
 
     async def get_conversation(self):
         conversation_id, message = await self.queue.get()
@@ -86,8 +91,7 @@ class RequestQueue():
             messages = [{"role": msg["role"], "content": msg["content"]} for msg in conversation_log["messages"]]
 
             # Call the API
-            response = ModelClientManager.make_llm_call(
-                self.model_client_manager,
+            response = self.model_client_manager.make_llm_call(
                 messages=messages,
                 model_settings=settings["model_text"]["choices"][conversation_log["model_text"]],
                 temperature=conversation_log["temperature"],
@@ -114,13 +118,11 @@ class RequestQueue():
             self.save_conversation_log(conversation_id)
             
     def save_conversation_log(self, conversation_id):
-        log_folder = "./logs/conversations"
         if not os.path.exists(log_folder):
             os.makedirs(log_folder)
         log_file = f"{log_folder}/{conversation_id}.json"
         with open(log_file, "w") as f:
             json.dump(self.conversation_logs[conversation_id], f, indent=4)
-
 
     async def handle_reroll_reaction(self, message_id, user_id):
         for conversation_id, log in self.conversation_logs.items():
@@ -132,7 +134,6 @@ class RequestQueue():
                         return
                     await self.reroll_messages(log, conversation_id, user_id)
                     break
-
 
     async def reroll_messages(self, conversation_log, conversation_id, user_id):
         channel = self.bot.get_channel(conversation_log["channel_id"])
@@ -155,7 +156,7 @@ class RequestQueue():
                     self.save_conversation_log(conversation_id)
                     await self.queue.put((conversation_id, last_msg))
             except Exception as e:
-                logger.info(f"no message to add a reaction to: {e}")
+                logger.info(f"No message to add a reaction to: {e}")
 
     async def handle_delete_reaction(self, message_id, user_id):
         for conversation_id, log in self.conversation_logs.items():
@@ -181,7 +182,6 @@ class RequestQueue():
             if message['role'] == 'user':  # Stop once the last message is deleted
                 break
 
-
         self.save_conversation_log(conversation_id)
         # Re-add the delete reaction to the new last message if exists
         if conversation_log['messages']:
@@ -192,9 +192,7 @@ class RequestQueue():
                     await last_msg.add_reaction('🔄')
                     await last_msg.add_reaction('🗑️')
             except Exception as e:
-                logger.info(f"no message to add a reaction to: {e}")
-
-
+                logger.info(f"No message to add a reaction to: {e}")
 
     def clear_conversation_log(self, conversation_id, user_id):
         log_file = f"./logs/conversations/{conversation_id}.json"
