@@ -47,6 +47,44 @@ class ModelClientManager():
             
         else:
             raise ValueError(f"Unsupported API type {model_settings['api_type']}")
+        
+    async def ask_if_generate_image(self, user_message, model_settings):
+        messages = [
+            {"role": "system", "content": "you are a helpful assistant. You only answer with 'yes' or 'no'."},
+            {"role": "user", "content": f"Does the User who wrote this message want you to create, generate or paint an image? Answer with 'Yes' or 'No'. Here is the Users's message: {user_message}"}
+        ]
+
+        response = await self.make_llm_call(
+            messages=messages,
+            model_settings=model_settings,
+            temperature=0.4,
+            max_tokens=10,
+            top_p=1,
+            stream=False
+        )
+
+        return response.strip()
+    
+    async def preprocess_image_prompt(self, conversation_log, model_settings):
+        messages = [{"role": msg["role"], "content": msg["content"]} for msg in conversation_log["messages"]]
+        system_prompt = "The following is a conversation between an assistant and a user. The user has the intent to generate an image. Rewrite the user's prompt to improve the image prompt quality. These are the rules on how an image prompt should look like: .... and here are some examples: ...."
+        # Replace the existing system prompt with the new one
+        for msg in messages:
+            if msg["role"] == "system":
+                msg["content"] = system_prompt
+                break
+
+        response = await self.make_llm_call(
+            messages=messages,
+            model_settings=model_settings,
+            temperature=0.5,
+            max_tokens=256,
+            top_p=1,
+            stream=False
+        )
+
+        return response.strip()
+
 
     def make_llm_call(self, messages, model_settings, temperature, max_tokens, top_p, stream):
         client = self.get_client(model_settings)

@@ -12,7 +12,7 @@ log_folder = "./logs/conversations"
 
 class RequestQueue():
     def __init__(self, bot):
-        self.queue = asyncio.Queue()
+        self.queue = asyncio.Queue() # Queue of (conversation_id, message, is_image_gen) tuples
         self.conversation_logs = {}
         self.bot = bot
         self.model_client_manager = ModelClientManager()
@@ -32,14 +32,9 @@ class RequestQueue():
 
     async def add_conversation(self, channel_id, user_id, message, role, message_id=None, create_empty=False):
         conversation_id = f"{channel_id}_{user_id}"
-
-        if any(word in message.lower() for word in self.image_gen_trigger_words):
-            # Request verification if image generation is intended
-            # TODO: Implement image generation verification
-            pass
+        timestamp = datetime.now().isoformat()
 
         if conversation_id not in self.conversation_logs:
-            timestamp = datetime.now().isoformat()
             self.conversation_logs[conversation_id] = {
                 "channel_id": channel_id,
                 "user_id": user_id,
@@ -57,6 +52,39 @@ class RequestQueue():
             conversation_log = self.conversation_logs[conversation_id]
             channel = self.bot.get_channel(conversation_log["channel_id"])
 
+            # if image prompt
+            # Check if the message contains any image generation trigger word and ask the llm to confirm if an image needs to be generated
+            if any(word in message.lower() for word in self.image_gen_trigger_words):
+                # if llama3-8b via Groq is available use it, otherwise use the model of the current conversation
+                model_settings = settings["model_text"]["choices"].get("llama3-8b-8192 (via Groq)", settings["model_text"]["choices"][self.conversation_logs[conversation_id]["model_text"]])
+                response = await self.model_client_manager.ask_if_generate_image(message, model_settings)
+
+                if response.lower().strip() == 'yes':
+
+                    try:
+                        last_msg_id = conversation_log['messages'][-1]['message_ids'][-1]
+                        if last_msg_id:
+                            last_msg = await channel.fetch_message(last_msg_id)
+                            for reaction in last_msg.reactions:
+                                if reaction.emoji == '🔄' and reaction.me:
+                                    await reaction.remove(self.bot.user)
+                                if reaction.emoji == '🗑️' and reaction.me:
+                                    await reaction.remove(self.bot.user)
+                    except Exception as e:
+                        logger.error(f"Failed to fetch or edit message for reaction removal: {e}")
+
+                    message_entry = {"role": role, "content": message, "message_ids": []}
+                    if role == 'user':
+                        message_entry["message_ids"] = [message_id]
+                    conversation_log["messages"].append(message_entry)
+                    self.save_conversation_log(conversation_id)
+
+                    # Pre-process image prompt
+                    improved_prompt = await self.model_client_manager.preprocess_image_prompt(conversation_log, model_settings)
+                    await self.queue.put((conversation_id, improved_prompt, True))
+                    return
+                
+            # elif text prompt
             # Delete the reactions from the last message
             try:
                 last_msg_id = conversation_log['messages'][-1]['message_ids'][-1]
@@ -75,7 +103,7 @@ class RequestQueue():
                 message_entry["message_ids"] = [message_id]
             self.conversation_logs[conversation_id]["messages"].append(message_entry)
             self.save_conversation_log(conversation_id)
-            await self.queue.put((conversation_id, message))
+            await self.queue.put((conversation_id, message, False))
         else:
             self.save_conversation_log(conversation_id)
 
@@ -85,34 +113,41 @@ class RequestQueue():
 
     async def process_conversation(self):
         while True:
-            conversation_id, message = await self.get_conversation()
+            conversation_id, message, is_image_request = await self.get_conversation()
             conversation_log = self.conversation_logs[conversation_id]
-            
-            messages = [{"role": msg["role"], "content": msg["content"]} for msg in conversation_log["messages"]]
-
-            # Call the API
-            response = self.model_client_manager.make_llm_call(
-                messages=messages,
-                model_settings=settings["model_text"]["choices"][conversation_log["model_text"]],
-                temperature=conversation_log["temperature"],
-                max_tokens=conversation_log["max_tokens"],
-                top_p=1,
-                stream=False
-            )
-
-            response_message_ids = []
-
-            # Send the response to Discord
             channel = self.bot.get_channel(conversation_log["channel_id"])
 
-            # Split the response into multiple messages to handle discord message limits
-            chunks = [response[i:i+1900] for i in range(0, len(response), 1900)]
-            for chunk in chunks:
-                message = await channel.send(chunk)
-                response_message_ids.append(message.id)
+            if is_image_request:
+                # Handle image generation
+                prompt = message
+                model_settings = settings["model_img"]["choices"][conversation_log["model_img"]]
+                image_url = await self.model_client_manager.generate_image(prompt, model_settings)
 
-            # Save the response and the response message IDs in the conversation log
-            conversation_log["messages"].append({"role": "assistant", "content": response, "message_ids": response_message_ids})
+                await channel.send(image_url)
+
+                conversation_log["messages"].append({"role": "assistant", "content": "Sure! Here is your image with the prompt {prompt}. (The Image was send to the user using Stable Diffusion via an API)", "message_ids": response_message_ids})
+
+            else:
+                # Handle text response
+                messages = [{"role": msg["role"], "content": msg["content"]} for msg in conversation_log["messages"]]
+                response = await self.model_client_manager.make_llm_call(
+                    messages=messages,
+                    model_settings=settings["model_text"]["choices"][conversation_log["model_text"]],
+                    temperature=conversation_log["temperature"],
+                    max_tokens=conversation_log["max_tokens"],
+                    top_p=1,
+                    stream=False
+                )
+
+                response_message_ids = []
+
+                chunks = [response[i:i+1900] for i in range(0, len(response), 1900)]
+                for chunk in chunks:
+                    message = await channel.send(chunk)
+                    response_message_ids.append(message.id)
+
+                conversation_log["messages"].append({"role": "assistant", "content": response, "message_ids": response_message_ids})
+
             await message.add_reaction('🔄')
             await message.add_reaction('🗑️')
             self.save_conversation_log(conversation_id)
@@ -154,7 +189,7 @@ class RequestQueue():
                 if last_msg_id:
                     last_msg = conversation_log['messages'][-1]
                     self.save_conversation_log(conversation_id)
-                    await self.queue.put((conversation_id, last_msg))
+                    await self.queue.put((conversation_id, last_msg, False))
             except Exception as e:
                 logger.info(f"No message to add a reaction to: {e}")
 

@@ -18,6 +18,8 @@ Future Enhancements will include local model hosting and integrating image gener
 
 - **AI Conversations**: Users can engage in conversations with the AI directly through Discord using slash commands or direct mentions.
 - **Dynamic Responses**: The bot utilizes LLMs to generate contextually relevant and engaging responses.
+- **Image generation**: The bot can generate images based on user input and display them in chat. The message is pre-processed by the LLM before being sent to the image generation model to achieve better results. If Llama 38 via Groq is used in `user_settings.py`, it will be utilized to improve speed. If it is not used, the bot will use the currently active LLM of the conversation.
+    To generate images, use trigger words like "generate" or "paint".
 
 ### Resource Management
 
