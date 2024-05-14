@@ -20,7 +20,6 @@ class ModelClientManager():
 
     def get_client(self, model_settings):
         if model_settings['api_type'] == "external_and_library":
-
             if model_settings['api'] == "groq":
                 return self.groq_client
             
@@ -95,7 +94,6 @@ class ModelClientManager():
 
         return active_models
 
-
 class GroqClient():
     def __init__(self, api_key):
         self.client = Groq(api_key=api_key)
@@ -158,7 +156,6 @@ class OllamaClient():
 
         response = requests.post(self.api_url + "/chat", json=payload)
         time.sleep(5)
-
 
 class LlamaCppClient():
     def __init__(self, model_path, chat_format):

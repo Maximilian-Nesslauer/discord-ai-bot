@@ -10,13 +10,12 @@ from settings import handle_settings_command, handle_characters_command
 from utils import load_config, start_app
 from requestQueue import RequestQueue
 
-# Load environment variables
+# Load environment variables from .env file
 load_dotenv()
 bot_token = os.getenv('DISCORD_BOT_TOKEN')
 config = load_config("config.json")
 ollama_app_path = os.getenv('OLLAMA_APP_PATH')
 
-# Set up logging
 logger.add("./logs/bot_logs.log", rotation="50 MB")
 
 class DiscordBot(discord.Client):
@@ -34,8 +33,9 @@ class DiscordBot(discord.Client):
             logger.error(f"Failed to start app on DiscordBot __init__: {e}")
 
     async def on_message(self, message: discord.Message):
+        # Ignore messages from the bot itself or while user is in settings
         if message.author == self.user or message.author.id in self.users_in_settings:
-            return  # Ignore messages from the bot itself or while user is in settings
+            return
 
         bot_mention = f'<@{self.user.id}>'
         if (message.channel.name == f'llm-{message.author.name}' or
@@ -51,14 +51,13 @@ class DiscordBot(discord.Client):
             logger.info(f"Added message to queue: {content}")
 
     async def on_ready(self):
-        """Log the bot's readiness state with user details"""
+        """Logs the bot's readiness state with user details and starts processing the conversation queue."""
         ready_logger = logger.bind(user=self.user.name, userid=self.user.id)
         ready_logger.info("Login Successful")
         await self.slash_command_tree.sync()
         self.loop.create_task(self.queue.process_conversation())
 
     async def ensure_admin_channel(self, guild):
-        """Ensure the llm-bot-admin channel exists with correct permissions"""
         for channel in guild.channels:
             if channel.name == 'llm-bot-admin' and isinstance(channel, discord.TextChannel):
                 return channel
@@ -109,7 +108,6 @@ async def setup_llm(interaction: discord.Interaction):
     )
     await channel.send(welcome_message)
 
-
 @bot.slash_command_tree.command(name='newllmconversation', description='Start a new LLM conversation channel')
 async def new_llm_conversation(interaction: discord.Interaction):
     guild = interaction.guild
@@ -137,7 +135,6 @@ async def new_llm_conversation(interaction: discord.Interaction):
     else:
         await interaction.response.send_message(f"Conversation channel already exists for {user.mention}.", ephemeral=True, delete_after=5)
 
-
 @bot.slash_command_tree.command(name='deletellmconversation', description='Delete and Clear the conversation log of the current channel')
 async def clear_conversation(interaction: discord.Interaction):
     channel_id = interaction.channel_id
@@ -164,7 +161,6 @@ async def clear_conversation(interaction: discord.Interaction):
 
     logger.info(f"Clear conversation attempt by user {user_id} in channel {channel_id}: {message}")
 
-
 @bot.slash_command_tree.command(name='settings', description='Manage bot settings')
 async def settings(interaction: discord.Interaction):
     bot.users_in_settings.add(interaction.user.id)
@@ -185,7 +181,6 @@ async def settings(interaction: discord.Interaction):
     except Exception as e:
         logger.error(f"Error in settings command: {e}")
         bot.users_in_settings.remove(interaction.user.id)
-
 
 @bot.slash_command_tree.command(name='characters', description='Manage bot character')
 async def characters(interaction: discord.Interaction):
