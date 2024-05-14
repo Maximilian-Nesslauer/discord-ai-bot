@@ -1,5 +1,5 @@
 {
     "delete_messages": true,
     "max_vram_model_usage_GB": 11,
-    "image_gen_trigger_words": ["paint", "generate", "image", "draw", "create", "sketch", "illustrate"]
+    "image_gen_trigger_words": ["paint", "generate", "image", "draw", "create", "sketch", "illustrate", "paint"]
 }

@@ -57,7 +57,7 @@ class RequestQueue():
             if any(word in message.lower() for word in self.image_gen_trigger_words):
                 # if llama3-8b via Groq is available use it, otherwise use the model of the current conversation
                 model_settings = settings["model_text"]["choices"].get("llama3-8b-8192 (via Groq)", settings["model_text"]["choices"][self.conversation_logs[conversation_id]["model_text"]])
-                response = await self.model_client_manager.ask_if_generate_image(message, model_settings)
+                response = self.model_client_manager.ask_if_generate_image(message, model_settings)
 
                 if response.lower().strip() == 'yes':
 
@@ -80,7 +80,7 @@ class RequestQueue():
                     self.save_conversation_log(conversation_id)
 
                     # Pre-process image prompt
-                    improved_prompt = await self.model_client_manager.preprocess_image_prompt(conversation_log, model_settings)
+                    improved_prompt = self.model_client_manager.preprocess_image_prompt(conversation_log, model_settings)
                     await self.queue.put((conversation_id, improved_prompt, True))
                     return
                 
@@ -108,8 +108,8 @@ class RequestQueue():
             self.save_conversation_log(conversation_id)
 
     async def get_conversation(self):
-        conversation_id, message = await self.queue.get()
-        return conversation_id, message
+        conversation_id, message, is_image_gen = await self.queue.get()
+        return conversation_id, message, is_image_gen
 
     async def process_conversation(self):
         while True:
@@ -130,7 +130,7 @@ class RequestQueue():
             else:
                 # Handle text response
                 messages = [{"role": msg["role"], "content": msg["content"]} for msg in conversation_log["messages"]]
-                response = await self.model_client_manager.make_llm_call(
+                response = self.model_client_manager.make_llm_call(
                     messages=messages,
                     model_settings=settings["model_text"]["choices"][conversation_log["model_text"]],
                     temperature=conversation_log["temperature"],

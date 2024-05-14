@@ -1,5 +1,6 @@
 import os
 import requests
+import base64
 import time
 from llama_cpp import Llama
 from loguru import logger
@@ -48,13 +49,13 @@ class ModelClientManager():
         else:
             raise ValueError(f"Unsupported API type {model_settings['api_type']}")
         
-    async def ask_if_generate_image(self, user_message, model_settings):
+    def ask_if_generate_image(self, user_message, model_settings):
         messages = [
             {"role": "system", "content": "you are a helpful assistant. You only answer with 'yes' or 'no'."},
             {"role": "user", "content": f"Does the User who wrote this message want you to create, generate or paint an image? Answer with 'Yes' or 'No'. Here is the Users's message: {user_message}"}
         ]
 
-        response = await self.make_llm_call(
+        response = self.make_llm_call(
             messages=messages,
             model_settings=model_settings,
             temperature=0.4,
@@ -65,16 +66,24 @@ class ModelClientManager():
 
         return response.strip()
     
-    async def preprocess_image_prompt(self, conversation_log, model_settings):
+    def preprocess_image_prompt(self, conversation_log, model_settings):
         messages = [{"role": msg["role"], "content": msg["content"]} for msg in conversation_log["messages"]]
-        system_prompt = "The following is a conversation between an assistant and a user. The user has the intent to generate an image. Rewrite the user's prompt to improve the image prompt quality. These are the rules on how an image prompt should look like: .... and here are some examples: ...."
+        system_prompt = "The following is a conversation between an assistant and a user. The user has the intent to generate an image. Rewrite the user's prompt to improve the image prompt quality. These are the rules on how an image prompt should look like: 1. 'if you simply prompt something very basic like 'Cat with a Hat' you'll indeed get that image, but often with a boring, monotonous background. So, don't just prompt your subject but also your background, like 'Cat with a hat in the forest.', 2. brief descriptions are reccomended. Here are some examples: 1. : ('(Movie poster), (Text 'Paws'), featuring a giant mischievous cat looming over a beachside town, style cartoonish, mood whimsical and playful, colors bright and eye-catching, setting sunny beach day.') or 2. : ('A woman with short hair is touching a metal fence and looking away thoughtfully, with the light casting shadows on her face, highlighting her serene expression.') or 3. : ('a miniature house in half a coconut shell, 2 floor, miniature fourniture, intricate , macro lens, by artgerm, wlop)."
+        
         # Replace the existing system prompt with the new one
         for msg in messages:
             if msg["role"] == "system":
                 msg["content"] = system_prompt
                 break
 
-        response = await self.make_llm_call(
+            
+        # Wrap the last user message
+        for msg in reversed(messages):
+            if msg["role"] == "user":
+                msg["content"] = f"Please generate a prompt for the image model API out of this message: {msg['content']}. Only output the prompt and nothing else"
+                break
+
+        response = self.make_llm_call(
             messages=messages,
             model_settings=model_settings,
             temperature=0.5,
