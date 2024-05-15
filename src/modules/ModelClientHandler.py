@@ -17,6 +17,7 @@ class ModelClientManager():
         self.vram_usage = {}
         self.groq_client = GroqClient(api_key=os.getenv('GROQ_API_KEY'))
         self.ollama_client = OllamaClient(api_url=os.getenv('OLLAMA_API_URL'), app_path=os.getenv('OLLAMA_APP_PATH'))
+        self.stable_diffusion_webUI_client = StableDiffusionWebUIClient(api_url=os.getenv('SD_WebUI_API_URL'))
         self.max_vram = config["max_vram_model_usage_GB"]
 
     def get_client(self, model_settings):
@@ -45,6 +46,9 @@ class ModelClientManager():
                     chat_format=model_settings['chat_format']
                 )
                 return llama_cpp_client
+            
+            elif model_settings['api'] == "stable-diffusion-webui":
+                return self.stable_diffusion_webUI_client
             
         else:
             raise ValueError(f"Unsupported API type {model_settings['api_type']}")
@@ -93,6 +97,11 @@ class ModelClientManager():
         )
 
         return response.strip()
+    
+    async def make_img_gen_call(self, prompt, model_settings):
+        client = self.get_client(model_settings)
+        image_data = await client.generate_image(prompt, model_settings)
+        return image_data
 
 
     def make_llm_call(self, messages, model_settings, temperature, max_tokens, top_p, stream):
@@ -140,6 +149,9 @@ class ModelClientManager():
             active_models.add(conversation["model_img"])
 
         return active_models
+    
+
+## Text Model Clients
 
 class GroqClient():
     def __init__(self, api_key):
@@ -217,3 +229,33 @@ class LlamaCppClient():
             stream=stream
         )
         return response['choices'][0]['message']['content']
+
+
+## Image Model Clients
+
+
+class StableDiffusionWebUIClient():
+    def __init__(self, api_url):
+        self.api_url = api_url
+
+    async def generate_image(self, prompt, model_settings):
+        payload = {
+            "prompt": prompt,
+            "steps": model_settings['steps'],
+            "cfg_scale": model_settings['cfg_scale'],
+            "width": model_settings['width'],
+            "height": model_settings['height']
+        }
+
+        try:
+            response = (requests.post(url=f'{self.api_url}/sdapi/v1/txt2img', json=payload)).json()
+
+            if 'images' in response and response['images']:
+                return base64.b64decode(response['images'][0])
+            else:
+                logger.error("No images found in the response")
+                return None
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"API call failed: {e}")
+            return None

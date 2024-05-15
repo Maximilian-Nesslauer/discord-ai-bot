@@ -55,6 +55,10 @@
                 "model_name": "Dreamshaper_8",
                 "api_type": "local",
                 "api": "stable-diffusion-webui",
+                "steps": 20,
+                "cfg_scale": 8,
+                "width": 512,
+                "height": 512,
                 "vram_usage_gb": 5.2
             },
             "Juggernaut XL - V9+RDPhoto2-Lighning_4S (via stable-diffusion-webui)": {
@@ -62,6 +66,10 @@
                 "model_name": "V9+RDPhoto2-Lighning_4S",
                 "api_type": "local",
                 "api": "stable-diffusion-webui",
+                "steps": 5,
+                "cfg_scale": 3,
+                "width": 512,
+                "height": 512,
                 "vram_usage_gb": 11
             }
         }

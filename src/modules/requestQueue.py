@@ -1,6 +1,7 @@
 import asyncio
 import os
 import json
+import discord
 from loguru import logger
 from datetime import datetime
 from utils import load_config
@@ -59,7 +60,7 @@ class RequestQueue():
                 model_settings = settings["model_text"]["choices"].get("llama3-8b-8192 (via Groq)", settings["model_text"]["choices"][self.conversation_logs[conversation_id]["model_text"]])
                 response = self.model_client_manager.ask_if_generate_image(message, model_settings)
 
-                if response.lower().strip() == 'yes':
+                if True or response.lower().strip() == 'yes':
 
                     try:
                         last_msg_id = conversation_log['messages'][-1]['message_ids'][-1]
@@ -121,11 +122,22 @@ class RequestQueue():
                 # Handle image generation
                 prompt = message
                 model_settings = settings["model_img"]["choices"][conversation_log["model_img"]]
-                image_url = await self.model_client_manager.generate_image(prompt, model_settings)
+                image_data = await self.model_client_manager.make_img_gen_call(prompt, model_settings)
 
-                await channel.send(image_url)
+                if image_data:
+                    directory_path = f"./logs/conversations/img_{conversation_id}"
+                    if not os.path.exists(directory_path):
+                        os.makedirs(directory_path)
 
-                conversation_log["messages"].append({"role": "assistant", "content": "Sure! Here is your image with the prompt {prompt}. (The Image was send to the user using Stable Diffusion via an API)", "message_ids": response_message_ids})
+                    image_path = f"{directory_path}/{datetime.now().strftime('%Y-%m-%dT%H-%M-%S.%f')}.png"
+                    
+                    with open(image_path, 'wb') as f:
+                        f.write(image_data)
+                    message = await channel.send(file=discord.File(image_path))
+                else:
+                    await channel.send("Failed to generate image.")
+
+                conversation_log["messages"].append({"role": "assistant", "content": "Sure! Here is your image with the prompt '{prompt}'). (The Image was send to the user using Stable Diffusion via an API)", "message_ids": message.id})
 
             else:
                 # Handle text response
