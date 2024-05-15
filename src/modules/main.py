@@ -1,8 +1,8 @@
 import os
 import sys
 import asyncio
-
 import discord
+from datetime import datetime
 from discord.ext import commands
 from discord import app_commands
 from loguru import logger
@@ -11,10 +11,12 @@ from settings import handle_settings_command, handle_characters_command
 from utils import load_config, start_app
 from requestQueue import RequestQueue
 
+# Load environment variables from .env file
 load_dotenv()
 bot_token = os.getenv('DISCORD_BOT_TOKEN')
 config = load_config("config.json")
-ollama_app_path=os.getenv('OLLAMA_APP_PATH')
+rate_limit_per_user_per_minute = config['rate_limit_per_user_per_minute']
+ollama_app_path = os.getenv('OLLAMA_APP_PATH')
 
 logger.add("./logs/bot_logs.log", rotation="50 MB")
 
@@ -26,6 +28,7 @@ class DiscordBot(discord.Client):
         self.slash_command_tree = app_commands.CommandTree(self)
         self.queue = RequestQueue(self)
         self.users_in_settings = set()
+        self.user_message_timestamps = {}
 
         try:
             start_app(ollama_app_path, "ollama.exe")
@@ -33,28 +36,47 @@ class DiscordBot(discord.Client):
             logger.error(f"Failed to start app on DiscordBot __init__: {e}")
 
     async def on_message(self, message: discord.Message):
+        # Ignore messages from the bot itself or while user is in settings
         if message.author == self.user or message.author.id in self.users_in_settings:
-            return  # Ignore messages from the bot itself or while user is in settings
+            return
+        
+        # Rate limit check
+        user_id = message.author.id
+        current_time = datetime.now().timestamp()
+        if user_id not in self.user_message_timestamps:
+            self.user_message_timestamps[user_id] = []
+        
+        # Filter out timestamps older than 1 minute
+        self.user_message_timestamps[user_id] = [timestamp for timestamp in self.user_message_timestamps[user_id] if current_time - timestamp < 60]
+        
+        if len(self.user_message_timestamps[user_id]) >= rate_limit_per_user_per_minute:
+            await message.channel.send(f"{message.author.mention}, you are sending messages too quickly. Please slow down.", delete_after=5)
+            return
+        
+        # Add the current timestamp to the user's message timestamps
+        self.user_message_timestamps[user_id].append(current_time)
 
         bot_mention = f'<@{self.user.id}>'
-        if message.channel.name == f'llm-{message.author.name}' or message.content.lower().startswith('hey llm') or bot_mention in message.content.lower() or message.reference and message.reference.resolved.author == self.user:
+        if (message.channel.name == f'llm-{message.author.name}' or
+                message.content.lower().startswith('hey llm') or
+                bot_mention in message.content.lower() or
+                (message.reference and message.reference.resolved and message.reference.resolved.author == self.user)):
             content = message.content
             if content.lower().startswith('hey llm'):
                 content = content[8:]  # Remove "hey llm " from the start of the message
             elif bot_mention in content.lower():
                 content = content.replace(bot_mention, '', 1)  # Remove the bot's mention from the message
-            await self.queue.add_conversation(message.channel.id, message.author.id, content, 'user',message.id, create_empty=False)
+            await self.queue.add_conversation(message.channel.id, message.author.id, content, 'user', message.id, create_empty=False)
             logger.info(f"Added message to queue: {content}")
 
     async def on_ready(self):
-        """Log the bot's readiness state with user details"""
+        """Logs the bot's readiness state with user details and starts processing the conversation queue."""
         ready_logger = logger.bind(user=self.user.name, userid=self.user.id)
         ready_logger.info("Login Successful")
         await self.slash_command_tree.sync()
         self.loop.create_task(self.queue.process_conversation())
 
     async def ensure_admin_channel(self, guild):
-        """Ensure the llm-bot-admin channel exists with correct permissions"""
         for channel in guild.channels:
             if channel.name == 'llm-bot-admin' and isinstance(channel, discord.TextChannel):
                 return channel
@@ -90,21 +112,20 @@ async def setup_llm(interaction: discord.Interaction):
 
     await interaction.response.defer()
 
-    msg = await interaction.followup.send("sending welcome message.")
+    msg = await interaction.followup.send("Sending welcome message.")
     await msg.delete(delay=1)
 
     welcome_message = (
         "**Welcome to the LLM Bot!** 🎉\n\n"
         "Here's how you can interact with the bot:\n\n"
         "- **Start a new conversation:** Use the command `/newllmconversation`.\n"
-        "- **Chat with the bot:** Mention the bot or start your message with 'hey llm'. There is no neeed for the 'hey llm' trigger if you are in your private llm channel.\n"
+        "- **Chat with the bot:** Mention the bot or start your message with 'hey llm'. There is no need for the 'hey llm' trigger if you are in your private llm channel.\n"
         "- **Adjust settings:** Use the `/settings` command to specify which model to use and to modify conversation parameters.\n"
         "- **Assign the bot different Characters:** Use the `/characters` command to specify which characters to use.\n"
         "- **Clear history:** Use `/clearllmconversation` to delete the conversation history in this channel. Regular maintenance ensures optimal performance.\n\n"
         "Enjoy your conversations with the LLM bot!"
     )
     await channel.send(welcome_message)
-
 
 @bot.slash_command_tree.command(name='newllmconversation', description='Start a new LLM conversation channel')
 async def new_llm_conversation(interaction: discord.Interaction):
@@ -128,13 +149,12 @@ async def new_llm_conversation(interaction: discord.Interaction):
         await msg.delete(delay=10)
 
         # Send a message in the new channel
-        await new_channel.send(f"Hey {user.mention}, lets start our conversation here.")
+        await new_channel.send(f"Hey {user.mention}, let's start our conversation here.")
         await bot.queue.add_conversation(new_channel.id, user.id, "null", 'user', create_empty=True)
     else:
         await interaction.response.send_message(f"Conversation channel already exists for {user.mention}.", ephemeral=True, delete_after=5)
 
-
-@bot.slash_command_tree.command(name='clearllmconversation', description='Clear the conversation log of the current channel')
+@bot.slash_command_tree.command(name='deletellmconversation', description='Delete and Clear the conversation log of the current channel')
 async def clear_conversation(interaction: discord.Interaction):
     channel_id = interaction.channel_id
     user_id = interaction.user.id
@@ -147,8 +167,18 @@ async def clear_conversation(interaction: discord.Interaction):
     user_name = interaction.user.name
     if user_name.lower() in channel.name.lower():
         await channel.delete()
-    logger.info(f"Clear conversation attempt by user {user_id} in channel {channel_id}: {message}")
+    logger.info(f"Delete and Clear conversation attempt by user {user_id} in channel {channel_id}: {message}")
 
+@bot.slash_command_tree.command(name='clearllmconversation', description='Clear the conversation log of the current channel')
+async def clear_conversation(interaction: discord.Interaction):
+    channel_id = interaction.channel_id
+    user_id = interaction.user.id
+    conversation_id = f"{channel_id}_{user_id}"
+    
+    message = bot.queue.clear_conversation_log(conversation_id, user_id)
+    await interaction.response.send_message(message)
+
+    logger.info(f"Clear conversation attempt by user {user_id} in channel {channel_id}: {message}")
 
 @bot.slash_command_tree.command(name='settings', description='Manage bot settings')
 async def settings(interaction: discord.Interaction):
@@ -167,10 +197,9 @@ async def settings(interaction: discord.Interaction):
         await handle_settings_command(bot, interaction, logger)
         bot.users_in_settings.remove(interaction.user.id)
 
-    except:
+    except Exception as e:
         logger.error(f"Error in settings command: {e}")
         bot.users_in_settings.remove(interaction.user.id)
-
 
 @bot.slash_command_tree.command(name='characters', description='Manage bot character')
 async def characters(interaction: discord.Interaction):
@@ -189,7 +218,7 @@ async def characters(interaction: discord.Interaction):
         await handle_characters_command(bot, interaction, logger)
         bot.users_in_settings.remove(interaction.user.id)
 
-    except:
+    except Exception as e:
         logger.error(f"Error in characters command: {e}")
         bot.users_in_settings.remove(interaction.user.id)
 

@@ -23,8 +23,10 @@ The goal of the project is to gain more coding experience and just having fun wi
 
 ### Chat Interaction
 
-- **AI Conversations**: Users can engage in conversations with the AI directly in Discord using slash commands or direct mentions. The user can create an own private channel with the '/newllmconversation' command to have a private conversation.
-- **AI Characters**: The user can use the '/characters' command to choose between different Characters. Different System prompts and messages will be injected into the conversation depending on the Character.
+- **AI Conversations**: Users can engage in conversations with the AI directly through Discord using slash commands or direct mentions.
+- **Dynamic Responses**: The bot utilizes LLMs to generate contextually relevant and engaging responses.
+- **Image generation**: The bot can generate images based on user input and display them in chat. The message is pre-processed by the LLM before being sent to the image generation model to achieve better results. If Llama 38 via Groq is used in `user_settings.py`, it will be utilized to improve speed. If it is not used, the bot will use the currently active LLM of the conversation.
+    To generate images, use trigger words like "generate" or "paint".
 
 ### Resource Management
 
@@ -46,9 +48,11 @@ The goal of the project is to gain more coding experience and just having fun wi
     pip install -r requirements.txt
     ```
 
+
+pip install -r requirements.txt
+
 ## Feedback is always welcome! :)
 
 ## TODO
 
-- Image Generation
 - Voice Conversations

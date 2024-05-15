@@ -1,14 +1,14 @@
 import os
 import discord
 import json
-
 from loguru import logger
-
 from utils import load_config
 
+config = load_config("config.json")
+
 async def handle_settings_command(bot, interaction, logger):
-    config = load_config("config.json")
     settings = load_settings("./src/settings/user_settings.json")
+    model_client_manager = bot.queue.model_client_manager
 
     channel = interaction.channel
 
@@ -29,38 +29,8 @@ async def handle_settings_command(bot, interaction, logger):
     if config['delete_messages']:
         await msg.delete()
 
-    # Handle text model selection
-    model_prompt = "Choose a text model:\n\n" + '\n\n'.join([f"\u2002\u2002{choice['emoji']} {name}" for name, choice in settings['model_text']['choices'].items()]) + '\n\u200B'
-    msg = await channel.send(model_prompt)
-    model_emojis = [choice['emoji'] for choice in settings['model_text']['choices'].values()]
-    for emoji in model_emojis:
-        await msg.add_reaction(emoji)
-
-    def model_check(reaction, user):
-        return user == interaction.user and str(reaction.emoji) in model_emojis
-
-    reaction, _ = await interaction.client.wait_for('reaction_add', timeout=60.0, check=model_check)
-    selected_model_key = next(key for key, value in settings['model_text']['choices'].items() if value['emoji'] == str(reaction.emoji))
-    settings['model_text']['value'] = selected_model_key
-    if config['delete_messages']:
-        await msg.delete()
-
-    # Handle image model selection
-    model_prompt = "Choose an image model:\n\n" + '\n\n'.join([f"\u2002\u2002{choice['emoji']} {name}" for name, choice in settings['model_img']['choices'].items()]) + '\n\u200B'
-    msg = await channel.send(model_prompt)
-    model_emojis = [choice['emoji'] for choice in settings['model_img']['choices'].values()]
-    for emoji in model_emojis:
-        await msg.add_reaction(emoji)
-
-    def model_check(reaction, user):
-        return user == interaction.user and str(reaction.emoji) in model_emojis
-
-    reaction, _ = await interaction.client.wait_for('reaction_add', timeout=60.0, check=model_check)
-    selected_model_key = next(key for key, value in settings['model_img']['choices'].items() if value['emoji'] == str(reaction.emoji))
-    settings['model_img']['value'] = selected_model_key
-    if config['delete_messages']:
-        await msg.delete()
-
+    await handle_model_selection(bot, interaction, model_client_manager, settings, 'model_text', "text")
+    await handle_model_selection(bot, interaction, model_client_manager, settings, 'model_img', "image")
 
     # Handle temperature setting
     await handle_numeric_setting(interaction, channel, settings, 'temperature', 0.1, 1.0, "Please type a new numerical value for temperature between 0.1 and 1.0:")
@@ -98,6 +68,34 @@ async def handle_settings_command(bot, interaction, logger):
     settings_update_complete_msg = await interaction.followup.send("Settings update complete.")
     await settings_update_complete_msg.delete(delay=5)
 
+async def handle_model_selection(bot, interaction, model_client_manager, settings, setting_key, model_type):
+    channel = interaction.channel
+    model_prompt = f"Choose a {model_type} model:\n\n" + '\n\n'.join([f"\u2002\u2002{choice['emoji']} {name}" for name, choice in settings[setting_key]['choices'].items()]) + '\n\u200B'
+    msg = await channel.send(model_prompt)
+    model_emojis = [choice['emoji'] for choice in settings[setting_key]['choices'].values()]
+    for emoji in model_emojis:
+        await msg.add_reaction(emoji)
+
+    def model_check(reaction, user):
+        return user == interaction.user and str(reaction.emoji) in model_emojis
+
+    reaction, _ = await interaction.client.wait_for('reaction_add', timeout=60.0, check=model_check)
+    selected_model_key = next(key for key, value in settings[setting_key]['choices'].items() if value['emoji'] == str(reaction.emoji))
+    selected_model_settings = settings[setting_key]['choices'][selected_model_key]
+
+    if selected_model_settings['api_type'] == "local":
+        required_vram = selected_model_settings.get("vram_usage_gb", 0)
+        # Check VRAM before applying settings
+        if not model_client_manager.check_vram_availability(selected_model_settings.get("vram_usage_gb", 0)):
+            await channel.send("Insufficient VRAM to load this model. Please choose another model or unload models by deleting active conversations using these models.")
+            return await handle_model_selection(bot, interaction, model_client_manager, settings, setting_key, model_type)
+        
+        model_client_manager.update_vram_usage(bot, selected_model_key, required_vram)
+
+
+    settings[setting_key]['value'] = selected_model_key
+    if config['delete_messages']:
+        await msg.delete()
 
 async def handle_characters_command(bot, interaction, logger):
     config = load_config("config.json")

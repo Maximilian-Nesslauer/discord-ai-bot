@@ -25,25 +25,52 @@
                 "emoji": "4️⃣",
                 "model_name": "llama3",
                 "api_type": "local",
-                "api": "ollama"
+                "api": "ollama",
+                "vram_usage_gb": 8.2
+            },
+            "phi-3 mini (via Ollama)": {
+                "emoji": "5️⃣",
+                "model_name": "phi3",
+                "api_type": "local",
+                "api": "ollama",
+                "vram_usage_gb": 8.2
+            },
+            "llama3-8b-8192 Q5_K_M (via llama cpp)": {
+                "emoji": "6️⃣",
+                "model_name": "llama3",
+                "api_type": "local",
+                "api": "llama_cpp",
+                "chat_format": "llama-3",
+                "model_path": "./public/models/llm/meta-llama-3-8b-instruct.Q5_K_M.gguf",
+                "vram_usage_gb": 8.2
             }
         }
     },
     "model_img": {
         "type": "choice",
-        "value": "Juggernaut XL - Jugg_X_RunDiffusion_Hyper (via stable-diffusion-webui)",
+        "value": "Dreamshaper_8 - sd1.5 (via stable-diffusion-webui)",
         "choices": {
-            "Juggernaut XL - Jugg_X_RunDiffusion_Hyper (via stable-diffusion-webui))": {
+            "Dreamshaper_8 - sd1.5 (via stable-diffusion-webui)": {
                 "emoji": "1️⃣",
-                "model_name": "Jugg_X_RunDiffusion_Hyper",
+                "model_name": "Dreamshaper_8",
                 "api_type": "local",
-                "api": "stable-diffusion-webui"
+                "api": "stable-diffusion-webui",
+                "steps": 20,
+                "cfg_scale": 8,
+                "width": 512,
+                "height": 512,
+                "vram_usage_gb": 5.2
             },
             "Juggernaut XL - V9+RDPhoto2-Lighning_4S (via stable-diffusion-webui)": {
                 "emoji": "2️⃣",
                 "model_name": "V9+RDPhoto2-Lighning_4S",
                 "api_type": "local",
-                "api": "stable-diffusion-webui"
+                "api": "stable-diffusion-webui",
+                "steps": 5,
+                "cfg_scale": 3,
+                "width": 512,
+                "height": 512,
+                "vram_usage_gb": 11
             }
         }
     },

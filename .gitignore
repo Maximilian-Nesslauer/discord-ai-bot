@@ -1,5 +1,10 @@
 logs/bot_logs.log
 logs/conversations/*
+public/models/llm/*
+!*.txt
+
+public/models/stable_diffusion/*
+!*.txt
 
 
 # Byte-compiled / optimized / DLL files
