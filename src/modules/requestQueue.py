@@ -1,6 +1,7 @@
 import asyncio
 import os
 import json
+import shutil
 import discord
 from loguru import logger
 from datetime import datetime
@@ -243,6 +244,8 @@ class RequestQueue():
 
     def clear_conversation_log(self, conversation_id, user_id):
         log_file = f"./logs/conversations/{conversation_id}.json"
+        image_folder = f"./logs/conversations/img_{conversation_id}"
+        
         if os.path.exists(log_file):
             try:
                 with open(log_file, "r") as f:
@@ -252,8 +255,13 @@ class RequestQueue():
                             self.conversation_logs.pop(conversation_id, None)
                             f.close()
                             os.remove(log_file)
-                            logger.info(f"Conversation log cleared for {conversation_id}.")
-                            return "Conversation log cleared."
+                            
+                            # Delete the image folder if it exists
+                            if os.path.exists(image_folder):
+                                shutil.rmtree(image_folder)
+                            
+                            logger.info(f"Conversation log and image folder cleared for {conversation_id}.")
+                            return "Conversation log and image folder cleared."
                         else:
                             return "Cannot clear conversation log while messages are in the queue."
                     else:
