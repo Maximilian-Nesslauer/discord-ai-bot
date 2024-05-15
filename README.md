@@ -1,16 +1,23 @@
 # discord-ai-bot
 
-Discord Bot that uses a LLM to chat with users
+A Discord bot that uses a Large Language Model (LLM) to chat with users.
 
 ## Overview
 
 This project aims to create a Discord bot that enables users to chat with an LLM.
 
-The bot will initially connect to external APIs like oobabooga's text-generation-webui (<https://github.com/oobabooga/text-generation-webui>), groq (<https://groq.com/>), OpenAI's gpt-4 API (<https://openai.com/product>) or any other OpenAI API style API.
+The bot can either connect to APIs like
 
-Future Enhancements will include local model hosting and integrating image generation capabilities.
+- oobabooga's text-generation-webui (<https://github.com/oobabooga/text-generation-webui>)
+- groq (<https://groq.com/>)
+- OpenAI's GPT-4 API (<https://openai.com/product>)
+- any other OpenAI API style API
 
-(I am aware that repos with similar functionalities might already exist. The goal of the project however is to expand my coding skills and having control over my own project.)
+or locally host an LLM with the transformers and llama cpp libraries (WIP).
+
+Future Enhancements will include image generation capabilities through Stable Diffusion models and Voice Conversations in Discord Channels through localy hosted open source speech recognition and generation models.
+
+The goal of the project is to gain more coding experience and just having fun with the bot.
 
 ## Features
 
@@ -31,12 +38,21 @@ Future Enhancements will include local model hosting and integrating image gener
 - go to <https://discord.com/developers/applications> and get a token for your bot with sufficient permissions -> save your token to .env . Never share this token!
 - If you want to use Ollama: Install Ollama and change the Ollama exe Path in .env
 
-## TODO
+- For Windows Users
 
-## For Windows Developers
+    ```bash
+    # Activate your virtual environment
+    .\.venv\Scripts\activate
 
-.\.venv\Scripts\activate
+    # Install required Python packages
+    pip install -r requirements.txt
+    ```
+
 
 pip install -r requirements.txt
 
-pip freeze > .\requirements.txt
+## Feedback is always welcome! :)
+
+## TODO
+
+- Voice Conversations
