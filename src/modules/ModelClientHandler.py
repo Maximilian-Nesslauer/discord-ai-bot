@@ -56,7 +56,7 @@ class ModelClientManager():
     def ask_if_generate_image(self, user_message, model_settings):
         messages = [
             {"role": "system", "content": "you are a helpful assistant. You only answer with 'yes' or 'no'."},
-            {"role": "user", "content": f"Does the User who wrote this message want you to create, generate or paint an image? Answer with 'Yes' or 'No'. Here is the Users's message: {user_message}"}
+            {"role": "user", "content": f"Does the User who wrote this message want you to create, generate or paint something? Answer with 'Yes' or 'No'. Here is the Users's message: {user_message}"}
         ]
 
         response = self.make_llm_call(

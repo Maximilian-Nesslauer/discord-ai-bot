@@ -60,7 +60,7 @@ class RequestQueue():
                 model_settings = settings["model_text"]["choices"].get("llama3-8b-8192 (via Groq)", settings["model_text"]["choices"][self.conversation_logs[conversation_id]["model_text"]])
                 response = self.model_client_manager.ask_if_generate_image(message, model_settings)
 
-                if True or response.lower().strip() == 'yes':
+                if response.lower().strip() == 'yes':
 
                     try:
                         last_msg_id = conversation_log['messages'][-1]['message_ids'][-1]

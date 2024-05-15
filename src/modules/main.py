@@ -2,6 +2,7 @@ import os
 import sys
 import asyncio
 import discord
+from datetime import datetime
 from discord.ext import commands
 from discord import app_commands
 from loguru import logger
@@ -14,6 +15,7 @@ from requestQueue import RequestQueue
 load_dotenv()
 bot_token = os.getenv('DISCORD_BOT_TOKEN')
 config = load_config("config.json")
+rate_limit_per_user_per_minute = config['rate_limit_per_user_per_minute']
 ollama_app_path = os.getenv('OLLAMA_APP_PATH')
 
 logger.add("./logs/bot_logs.log", rotation="50 MB")
@@ -26,6 +28,7 @@ class DiscordBot(discord.Client):
         self.slash_command_tree = app_commands.CommandTree(self)
         self.queue = RequestQueue(self)
         self.users_in_settings = set()
+        self.user_message_timestamps = {}
 
         try:
             start_app(ollama_app_path, "ollama.exe")
@@ -36,6 +39,22 @@ class DiscordBot(discord.Client):
         # Ignore messages from the bot itself or while user is in settings
         if message.author == self.user or message.author.id in self.users_in_settings:
             return
+        
+        # Rate limit check
+        user_id = message.author.id
+        current_time = datetime.now().timestamp()
+        if user_id not in self.user_message_timestamps:
+            self.user_message_timestamps[user_id] = []
+        
+        # Filter out timestamps older than 1 minute
+        self.user_message_timestamps[user_id] = [timestamp for timestamp in self.user_message_timestamps[user_id] if current_time - timestamp < 60]
+        
+        if len(self.user_message_timestamps[user_id]) >= rate_limit_per_user_per_minute:
+            await message.channel.send(f"{message.author.mention}, you are sending messages too quickly. Please slow down.", delete_after=5)
+            return
+        
+        # Add the current timestamp to the user's message timestamps
+        self.user_message_timestamps[user_id].append(current_time)
 
         bot_mention = f'<@{self.user.id}>'
         if (message.channel.name == f'llm-{message.author.name}' or
